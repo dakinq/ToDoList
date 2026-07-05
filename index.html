@@ -22,7 +22,7 @@
     --red: #B23A2E;
   }
 
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
   body {
     margin: 0;
@@ -36,131 +36,90 @@
   }
 
   .sheet { width: 100%; max-width: 560px; }
-
-  header { text-align: center; margin-bottom: 20px; position: relative; }
-
-  .eyebrow {
-    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--sage); font-weight: 700;
-  }
-
-  h1 {
-    font-family: 'Fraunces', serif; font-weight: 600; font-size: 40px;
-    margin: 6px 0 4px; font-style: italic;
-  }
-
+  header { text-align: center; margin-bottom: 20px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); font-weight: 700; }
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 40px; margin: 6px 0 4px; font-style: italic; }
   .sub { font-size: 14px; color: #7a7268; }
 
   .topbar { display: flex; justify-content: center; gap: 16px; align-items: center; margin-bottom: 20px; }
-  .icon-btn {
-    background: white; border: 1px solid var(--line); border-radius: 8px;
-    padding: 6px 12px; font-size: 13px; cursor: pointer; color: var(--ink);
-    font-family: 'Karla', sans-serif;
-  }
+  .icon-btn { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: var(--ink); font-family: 'Karla', sans-serif; }
   .icon-btn:hover { border-color: var(--sage); }
 
   /* Login */
-  .login-box {
-    background: white; border: 1px solid var(--line); border-radius: 14px;
-    padding: 28px 24px; box-shadow: 0 2px 0 var(--line);
-    display: flex; flex-direction: column; gap: 12px;
-  }
-  .login-box input, .composer input, .composer select, .modal input, .modal select {
-    border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px;
-    font-family: 'Karla', sans-serif; font-size: 15px; outline: none;
-    background: var(--paper); color: var(--ink);
-  }
-  .login-box input:focus, .composer input:focus, .composer select:focus { border-color: var(--sage); }
-  .login-box button, .composer .add, .modal button.primary {
-    border: none; background: var(--clay); color: white; border-radius: 8px;
-    padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700;
-    font-size: 15px; cursor: pointer; transition: background 0.15s ease;
-  }
-  .login-box button:hover, .composer .add:hover, .modal button.primary:hover { background: #a1573f; }
+  .login-box { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 28px 24px; box-shadow: 0 2px 0 var(--line); display: flex; flex-direction: column; gap: 12px; }
+  .login-box input { border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; font-family: 'Karla', sans-serif; font-size: 15px; outline: none; background: var(--paper); color: var(--ink); }
+  .login-box input:focus { border-color: var(--sage); }
+  .remember-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #7a7268; }
+  .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--sage); }
+  .login-box button { border: none; background: var(--clay); color: white; border-radius: 8px; padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; transition: background 0.15s ease; }
+  .login-box button:hover { background: #a1573f; }
   .login-error { color: var(--clay); font-size: 13px; text-align: center; min-height: 16px; }
 
   /* Composer */
-  .composer {
-    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px;
-    background: white; border: 1px solid var(--line); border-radius: 14px;
-    padding: 12px; box-shadow: 0 2px 0 var(--line);
-  }
-  .composer input[type="text"] { flex: 1 1 100%; }
-  .composer select, .composer input[type="date"] { flex: 1 1 30%; font-size: 13px; }
-  .composer .add { flex: 1 1 100%; }
+  .composer { background: white; border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 2px 0 var(--line); margin-bottom: 22px; display: flex; flex-direction: column; gap: 8px; }
+  .composer input[type="text"] { border: 1px solid var(--line); border-radius: 8px; padding: 11px 12px; font-family: 'Karla', sans-serif; font-size: 15px; outline: none; background: var(--paper); color: var(--ink); width: 100%; }
+  .composer input[type="text"]:focus { border-color: var(--sage); }
+  .field-row { display: flex; gap: 8px; }
+  .field-group { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+  .field-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sage); padding-left: 2px; }
+  .field-group select, .field-group input[type="date"] { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-family: 'Karla', sans-serif; font-size: 13px; outline: none; background: var(--paper); color: var(--ink); width: 100%; }
+  .field-group select:focus, .field-group input[type="date"]:focus { border-color: var(--sage); }
+  .composer button.add { border: none; background: var(--clay); color: white; border-radius: 8px; padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; transition: background 0.15s; width: 100%; }
+  .composer button.add:hover { background: #a1573f; }
 
+  /* List */
   .list { display: flex; flex-direction: column; gap: 10px; }
-
-  .item {
-    display: flex; align-items: flex-start; gap: 12px; background: white;
-    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
-    animation: rise 0.25s ease;
-  }
+  .item { display: flex; align-items: flex-start; gap: 12px; background: white; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; animation: rise 0.25s ease; user-select: none; -webkit-user-select: none; }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .item.done { opacity: 0.5; }
   .item.overdue { border-color: var(--red); }
+  .item.pressing { background: #f0ebe4; }
 
-  .checkbox {
-    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sage);
-    flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    margin-top: 2px; background: white; transition: background 0.15s ease;
-  }
+  .checkbox { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sage); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 2px; background: white; transition: background 0.15s; }
   .checkbox.checked { background: var(--sage); }
   .checkbox.checked::after { content: '✓'; color: white; font-size: 13px; font-weight: bold; }
 
   .item-body { flex: 1; min-width: 0; }
   .item-text { font-size: 15px; line-height: 1.4; word-break: break-word; }
   .item.done .item-text { text-decoration: line-through; }
-
   .meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
   .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.02em; }
   .tag.category { background: #E6EBE3; color: var(--sage); }
   .tag.assignee { background: #F2E2DB; color: var(--clay); }
   .tag.due { background: #EFE6D8; color: var(--gold); }
   .tag.due.overdue { background: #F6DAD5; color: var(--red); }
+  .tag.prio1 { background: #F6DAD5; color: var(--red); }
+  .tag.prio2 { background: #FBF0D8; color: #A07820; }
+  .tag.prio3 { background: #E6EBE3; color: var(--sage); }
 
-  .del {
-    border: none; background: transparent; color: #bbb1a3; font-size: 18px;
-    cursor: pointer; line-height: 1; padding: 2px 4px; flex-shrink: 0;
-  }
+  .del { border: none; background: transparent; color: #bbb1a3; font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 4px; flex-shrink: 0; }
   .del:hover { color: var(--clay); }
 
-  .empty {
-    text-align: center; padding: 48px 20px; color: #a89d8d;
-    font-family: 'Fraunces', serif; font-style: italic; font-size: 17px;
-  }
-
+  .empty { text-align: center; padding: 48px 20px; color: #a89d8d; font-family: 'Fraunces', serif; font-style: italic; font-size: 17px; }
   .footer-note { text-align: center; font-size: 12px; color: #a89d8d; margin-top: 28px; }
   .hidden { display: none !important; }
 
-  /* Modal */
-  .modal-overlay {
-    position: fixed; inset: 0; background: rgba(46,42,38,0.4);
-    display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10;
-  }
-  .modal {
-    background: var(--paper); border-radius: 14px; padding: 24px;
-    width: 100%; max-width: 420px; max-height: 80vh; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 16px;
-  }
+  /* Modals */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(46,42,38,0.4); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
+  .modal { background: var(--paper); border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
   .modal h2 { font-family: 'Fraunces', serif; font-style: italic; margin: 0; font-size: 22px; }
   .modal-section { display: flex; flex-direction: column; gap: 8px; }
   .modal-section label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sage); }
+  .modal input[type="text"], .modal input[type="date"], .modal select { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: 'Karla', sans-serif; font-size: 15px; outline: none; background: white; color: var(--ink); width: 100%; }
+  .modal input:focus, .modal select:focus { border-color: var(--sage); }
+  .modal-btn-row { display: flex; gap: 8px; }
+  .modal button.primary { border: none; background: var(--clay); color: white; border-radius: 8px; padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; flex: 1; }
+  .modal button.secondary { border: 1px solid var(--line); background: white; color: var(--ink); border-radius: 8px; padding: 11px; cursor: pointer; font-family: 'Karla', sans-serif; flex: 1; }
   .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip {
-    background: white; border: 1px solid var(--line); border-radius: 20px;
-    padding: 4px 10px; font-size: 13px; display: flex; align-items: center; gap: 6px;
-  }
+  .chip { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
   .chip button { border: none; background: none; color: #bbb1a3; cursor: pointer; font-size: 14px; line-height: 1; }
   .chip button:hover { color: var(--clay); }
   .add-row { display: flex; gap: 6px; }
-  .add-row input { flex: 1; }
-  .add-row button { border: none; background: var(--sage); color: white; border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 700; }
-  .modal button.secondary {
-    border: 1px solid var(--line); background: white; color: var(--ink);
-    border-radius: 8px; padding: 10px; cursor: pointer; font-family: 'Karla', sans-serif;
-  }
+  .add-row input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-family: 'Karla', sans-serif; font-size: 14px; outline: none; background: white; }
+  .add-row button { border: none; background: var(--sage); color: white; border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 700; font-size: 18px; }
   .push-status { font-size: 12px; color: #7a7268; }
+
+  .long-press-hint { text-align: center; font-size: 12px; color: #bbb1a3; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -175,6 +134,10 @@
   <div id="loginView" class="login-box">
     <input id="emailInput" type="email" placeholder="E-Mail" autocomplete="username">
     <input id="passwordInput" type="password" placeholder="Passwort" autocomplete="current-password">
+    <div class="remember-row">
+      <input type="checkbox" id="rememberMe" checked>
+      <label for="rememberMe">Angemeldet bleiben</label>
+    </div>
     <button id="loginBtn">Anmelden</button>
     <div class="login-error" id="loginError"></div>
   </div>
@@ -188,13 +151,36 @@
 
     <div class="composer">
       <input id="textInput" type="text" placeholder="Was steht an?" maxlength="200">
-      <select id="categoryInput"></select>
-      <select id="assigneeInput"></select>
-      <input id="dueInput" type="date">
+      <div class="field-row">
+        <div class="field-group">
+          <span class="field-label">Kategorie</span>
+          <select id="categoryInput"></select>
+        </div>
+        <div class="field-group">
+          <span class="field-label">Für</span>
+          <select id="assigneeInput"></select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field-group">
+          <span class="field-label">Priorität</span>
+          <select id="priorityInput">
+            <option value="">Keine</option>
+            <option value="1">🔴 Prio 1</option>
+            <option value="2">🟡 Prio 2</option>
+            <option value="3">🟢 Prio 3</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <span class="field-label">Fällig am</span>
+          <input id="dueInput" type="date">
+        </div>
+      </div>
       <button class="add" id="addBtn">Hinzufügen</button>
     </div>
 
     <div class="list" id="list"></div>
+    <div class="long-press-hint">Lang drücken zum Bearbeiten</div>
     <div class="push-status" id="pushStatus"></div>
   </div>
 
@@ -205,7 +191,6 @@
 <div id="settingsModal" class="modal-overlay hidden">
   <div class="modal">
     <h2>Einstellungen</h2>
-
     <div class="modal-section">
       <label>Kategorien</label>
       <div class="chip-row" id="categoryChips"></div>
@@ -214,7 +199,6 @@
         <button id="addCategoryBtn">+</button>
       </div>
     </div>
-
     <div class="modal-section">
       <label>Zuweisungen</label>
       <div class="chip-row" id="assigneeChips"></div>
@@ -223,14 +207,48 @@
         <button id="addAssigneeBtn">+</button>
       </div>
     </div>
-
     <div class="modal-section">
       <label>Erinnerungen</label>
       <button class="secondary" id="enablePushBtn">Push-Benachrichtigungen aktivieren</button>
       <div class="push-status" id="pushStatusModal"></div>
     </div>
-
     <button class="primary" id="closeSettingsBtn">Fertig</button>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Bearbeiten</h2>
+    <div class="modal-section">
+      <label>Aufgabe</label>
+      <input id="editTextInput" type="text" maxlength="200">
+    </div>
+    <div class="modal-section">
+      <label>Kategorie</label>
+      <select id="editCategoryInput"></select>
+    </div>
+    <div class="modal-section">
+      <label>Für</label>
+      <select id="editAssigneeInput"></select>
+    </div>
+    <div class="modal-section">
+      <label>Priorität</label>
+      <select id="editPriorityInput">
+        <option value="">Keine</option>
+        <option value="1">🔴 Prio 1</option>
+        <option value="2">🟡 Prio 2</option>
+        <option value="3">🟢 Prio 3</option>
+      </select>
+    </div>
+    <div class="modal-section">
+      <label>Fällig am</label>
+      <input id="editDueInput" type="date">
+    </div>
+    <div class="modal-btn-row">
+      <button class="secondary" id="cancelEditBtn">Abbrechen</button>
+      <button class="primary" id="saveEditBtn">Speichern</button>
+    </div>
   </div>
 </div>
 
@@ -257,21 +275,23 @@
   const configRef = db.collection('config');
   const tokensRef = db.collection('tokens');
 
-  const DEFAULT_CATEGORIES = ['Freizeit'];
+  const DEFAULT_CATEGORIES = ['Freizeit', 'Einkauf', 'Haushalt', 'Sonstiges'];
   const DEFAULT_ASSIGNEES = ['Partner A', 'Partner B', 'Beide'];
 
-  // ---- Elements ----
+  // Elements
   const loginView = document.getElementById('loginView');
   const appView = document.getElementById('appView');
   const subline = document.getElementById('subline');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
+  const rememberMe = document.getElementById('rememberMe');
   const loginBtn = document.getElementById('loginBtn');
   const loginError = document.getElementById('loginError');
   const signoutBtn = document.getElementById('signoutBtn');
   const textInput = document.getElementById('textInput');
   const categoryInput = document.getElementById('categoryInput');
   const assigneeInput = document.getElementById('assigneeInput');
+  const priorityInput = document.getElementById('priorityInput');
   const dueInput = document.getElementById('dueInput');
   const addBtn = document.getElementById('addBtn');
   const listEl = document.getElementById('list');
@@ -287,12 +307,19 @@
   const enablePushBtn = document.getElementById('enablePushBtn');
   const pushStatus = document.getElementById('pushStatus');
   const pushStatusModal = document.getElementById('pushStatusModal');
+  const editModal = document.getElementById('editModal');
+  const editTextInput = document.getElementById('editTextInput');
+  const editCategoryInput = document.getElementById('editCategoryInput');
+  const editAssigneeInput = document.getElementById('editAssigneeInput');
+  const editPriorityInput = document.getElementById('editPriorityInput');
+  const editDueInput = document.getElementById('editDueInput');
+  const cancelEditBtn = document.getElementById('cancelEditBtn');
+  const saveEditBtn = document.getElementById('saveEditBtn');
 
-  let unsubTodos = null;
-  let unsubCategories = null;
-  let unsubAssignees = null;
-  let categories = [];
-  let assignees = [];
+  let unsubTodos = null, unsubCategories = null, unsubAssignees = null;
+  let categories = [], assignees = [];
+  let currentTodos = [];
+  let editingTodoId = null;
 
   // ---- Auth ----
   loginBtn.addEventListener('click', doLogin);
@@ -302,6 +329,10 @@
     loginError.textContent = '';
     loginBtn.disabled = true;
     try {
+      const persistence = rememberMe.checked
+        ? firebase.auth.Auth.Persistence.LOCAL
+        : firebase.auth.Auth.Persistence.SESSION;
+      await auth.setPersistence(persistence);
       await auth.signInWithEmailAndPassword(emailInput.value.trim(), passwordInput.value);
     } catch (e) {
       loginError.textContent = 'Anmeldung fehlgeschlagen. E-Mail oder Passwort prüfen.';
@@ -338,11 +369,12 @@
     if (!asgDoc.exists) await configRef.doc('assignees').set({ items: DEFAULT_ASSIGNEES });
   }
 
-  // ---- Categories / Assignees (live) ----
+  // ---- Config live sync ----
   function subscribeToCategories() {
     unsubCategories = configRef.doc('categories').onSnapshot(doc => {
       categories = (doc.exists && doc.data().items) || [];
       renderSelect(categoryInput, categories);
+      renderSelect(editCategoryInput, categories);
       renderChips(categoryChips, categories, removeCategory);
     });
   }
@@ -350,20 +382,20 @@
     unsubAssignees = configRef.doc('assignees').onSnapshot(doc => {
       assignees = (doc.exists && doc.data().items) || [];
       renderSelect(assigneeInput, assignees);
+      renderSelect(editAssigneeInput, assignees);
       renderChips(assigneeChips, assignees, removeAssignee);
     });
   }
 
-  function renderSelect(selectEl, items) {
-    const current = selectEl.value;
-    selectEl.innerHTML = '';
+  function renderSelect(el, items, selected) {
+    const current = selected !== undefined ? selected : el.value;
+    el.innerHTML = '';
     items.forEach(item => {
       const opt = document.createElement('option');
-      opt.value = item;
-      opt.textContent = item;
-      selectEl.appendChild(opt);
+      opt.value = item; opt.textContent = item;
+      el.appendChild(opt);
     });
-    if (items.includes(current)) selectEl.value = current;
+    if (current && items.includes(current)) el.value = current;
   }
 
   function renderChips(container, items, onRemove) {
@@ -376,8 +408,7 @@
       const btn = document.createElement('button');
       btn.innerHTML = '&times;';
       btn.onclick = () => onRemove(item);
-      chip.appendChild(span);
-      chip.appendChild(btn);
+      chip.appendChild(span); chip.appendChild(btn);
       container.appendChild(chip);
     });
   }
@@ -394,12 +425,8 @@
     newAssigneeInput.value = '';
     await configRef.doc('assignees').set({ items: [...assignees, val] });
   });
-  async function removeCategory(val) {
-    await configRef.doc('categories').set({ items: categories.filter(c => c !== val) });
-  }
-  async function removeAssignee(val) {
-    await configRef.doc('assignees').set({ items: assignees.filter(a => a !== val) });
-  }
+  async function removeCategory(val) { await configRef.doc('categories').set({ items: categories.filter(c => c !== val) }); }
+  async function removeAssignee(val) { await configRef.doc('assignees').set({ items: assignees.filter(a => a !== val) }); }
 
   settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
   closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
@@ -409,9 +436,25 @@
     if (unsubTodos) unsubTodos();
     unsubTodos = todosRef.onSnapshot(snapshot => {
       const todos = [];
-      snapshot.forEach(doc => todos.push({ id: doc.id, ...doc.data() }));
+      const now = Date.now();
+      const oneDayMs = 24 * 60 * 60 * 1000;
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        // Auto-delete erledigte To-dos nach 24h
+        if (data.done && data.completedAt) {
+          const completedMs = data.completedAt.toMillis ? data.completedAt.toMillis() : 0;
+          if (now - completedMs > oneDayMs) {
+            todosRef.doc(doc.id).delete().catch(() => {});
+            return;
+          }
+        }
+        todos.push({ id: doc.id, ...data });
+      });
+
+      currentTodos = todos;
       render(todos);
-    }, err => console.error(err));
+    });
   }
 
   function render(todos) {
@@ -424,25 +467,31 @@
 
     const sorted = [...todos].sort((a, b) => {
       if (a.done !== b.done) return a.done ? 1 : -1;
+      const aPrio = a.priority ? parseInt(a.priority) : 99;
+      const bPrio = b.priority ? parseInt(b.priority) : 99;
+      if (aPrio !== bPrio) return aPrio - bPrio;
       const aDue = a.dueDate ? new Date(a.dueDate) : null;
       const bDue = b.dueDate ? new Date(b.dueDate) : null;
       if (aDue && bDue) return aDue - bDue;
       if (aDue && !bDue) return -1;
       if (!aDue && bDue) return 1;
-      const aCreated = a.createdAt ? a.createdAt.toMillis() : 0;
-      const bCreated = b.createdAt ? b.createdAt.toMillis() : 0;
-      return aCreated - bCreated;
+      const aMs = a.createdAt ? a.createdAt.toMillis() : 0;
+      const bMs = b.createdAt ? b.createdAt.toMillis() : 0;
+      return aMs - bMs;
     });
 
     for (const todo of sorted) {
       const item = document.createElement('div');
-      const dueDate = todo.dueDate ? new Date(todo.dueDate) : null;
+      const dueDate = todo.dueDate ? new Date(todo.dueDate + 'T00:00:00') : null;
       const isOverdue = dueDate && !todo.done && dueDate < today;
       item.className = 'item' + (todo.done ? ' done' : '') + (isOverdue ? ' overdue' : '');
 
+      // Long press
+      addLongPress(item, todo.id);
+
       const checkbox = document.createElement('div');
       checkbox.className = 'checkbox' + (todo.done ? ' checked' : '');
-      checkbox.onclick = () => toggleTodo(todo.id, !todo.done);
+      checkbox.onclick = (e) => { e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
 
       const body = document.createElement('div');
       body.className = 'item-body';
@@ -454,6 +503,12 @@
       const meta = document.createElement('div');
       meta.className = 'meta';
 
+      if (todo.priority) {
+        const prioTag = document.createElement('span');
+        prioTag.className = 'tag prio' + todo.priority;
+        prioTag.textContent = 'Prio ' + todo.priority;
+        meta.appendChild(prioTag);
+      }
       if (todo.category) {
         const catTag = document.createElement('span');
         catTag.className = 'tag category';
@@ -469,7 +524,7 @@
       if (todo.dueDate) {
         const dueTag = document.createElement('span');
         dueTag.className = 'tag due' + (isOverdue ? ' overdue' : '');
-        const d = new Date(todo.dueDate);
+        const d = new Date(todo.dueDate + 'T00:00:00');
         dueTag.textContent = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
         meta.appendChild(dueTag);
       }
@@ -480,7 +535,7 @@
       const delBtn = document.createElement('button');
       delBtn.className = 'del';
       delBtn.innerHTML = '&times;';
-      delBtn.onclick = () => deleteTodo(todo.id);
+      delBtn.onclick = (e) => { e.stopPropagation(); deleteTodo(todo.id); };
 
       item.appendChild(checkbox);
       item.appendChild(body);
@@ -489,6 +544,66 @@
     }
   }
 
+  // ---- Long press ----
+  let longPressTimer = null;
+
+  function addLongPress(el, todoId) {
+    const start = () => {
+      longPressTimer = setTimeout(() => {
+        el.classList.add('pressing');
+        openEditModal(todoId);
+        el.classList.remove('pressing');
+      }, 600);
+    };
+    const cancel = () => {
+      clearTimeout(longPressTimer);
+      el.classList.remove('pressing');
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', cancel);
+    el.addEventListener('touchmove', cancel);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', cancel);
+    el.addEventListener('mouseleave', cancel);
+  }
+
+  function openEditModal(todoId) {
+    const todo = currentTodos.find(t => t.id === todoId);
+    if (!todo) return;
+    editingTodoId = todoId;
+    editTextInput.value = todo.text;
+    editDueInput.value = todo.dueDate || '';
+    editPriorityInput.value = todo.priority || '';
+    renderSelect(editCategoryInput, categories, todo.category);
+    renderSelect(editAssigneeInput, assignees, todo.assignee);
+    editModal.classList.remove('hidden');
+  }
+
+  cancelEditBtn.addEventListener('click', () => {
+    editModal.classList.add('hidden');
+    editingTodoId = null;
+  });
+
+  saveEditBtn.addEventListener('click', async () => {
+    const text = editTextInput.value.trim();
+    if (!text || !editingTodoId) return;
+    try {
+      await todosRef.doc(editingTodoId).update({
+        text,
+        category: editCategoryInput.value || null,
+        assignee: editAssigneeInput.value || null,
+        dueDate: editDueInput.value || null,
+        priority: editPriorityInput.value || null,
+        notified: false
+      });
+      editModal.classList.add('hidden');
+      editingTodoId = null;
+    } catch (e) {
+      console.error('Bearbeiten fehlgeschlagen', e);
+    }
+  });
+
+  // ---- Add / Toggle / Delete ----
   addBtn.addEventListener('click', addTodo);
   textInput.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
 
@@ -498,77 +613,56 @@
     const user = auth.currentUser;
     if (!user) return;
     const payload = {
-      text,
-      done: false,
+      text, done: false,
       category: categoryInput.value || null,
       assignee: assigneeInput.value || null,
       dueDate: dueInput.value || null,
+      priority: priorityInput.value || null,
       notified: false,
+      completedAt: null,
       authorEmail: user.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-    textInput.value = '';
-    dueInput.value = '';
-    try {
-      await todosRef.add(payload);
-    } catch (e) {
-      console.error('Hinzufügen fehlgeschlagen', e);
-    }
+    textInput.value = ''; dueInput.value = ''; priorityInput.value = '';
+    try { await todosRef.add(payload); } catch (e) { console.error(e); }
   }
 
   async function toggleTodo(id, done) {
-    try { await todosRef.doc(id).update({ done }); }
-    catch (e) { console.error('Update fehlgeschlagen', e); }
+    const update = { done };
+    if (done) update.completedAt = firebase.firestore.FieldValue.serverTimestamp();
+    else update.completedAt = null;
+    try { await todosRef.doc(id).update(update); } catch (e) { console.error(e); }
   }
 
   async function deleteTodo(id) {
-    try { await todosRef.doc(id).delete(); }
-    catch (e) { console.error('Löschen fehlgeschlagen', e); }
+    try { await todosRef.doc(id).delete(); } catch (e) { console.error(e); }
   }
 
-  // ---- Push notifications ----
+  // ---- Push ----
   let messaging;
   try { messaging = firebase.messaging(); } catch (e) { messaging = null; }
 
-  function setPushStatus(text) {
-    pushStatus.textContent = text;
-    pushStatusModal.textContent = text;
-  }
+  function setPushStatus(text) { pushStatus.textContent = text; pushStatusModal.textContent = text; }
 
-  async function registerServiceWorkerAndToken() {
-    if (!messaging) { setPushStatus('Push wird auf diesem Gerät/Browser nicht unterstützt.'); return; }
+  async function registerPush() {
+    if (!messaging) { setPushStatus('Push nicht unterstützt auf diesem Gerät.'); return; }
     try {
-      const registration = await navigator.serviceWorker.register('firebase-messaging-sw.js');
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        setPushStatus('Benachrichtigungen wurden nicht erlaubt.');
-        return;
-      }
-      const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration });
+      const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { setPushStatus('Benachrichtigungen nicht erlaubt.'); return; }
+      const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
       if (token) {
         const user = auth.currentUser;
-        await tokensRef.doc(token).set({
-          token,
-          email: user ? user.email : null,
-          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        await tokensRef.doc(token).set({ token, email: user ? user.email : null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
         setPushStatus('Push-Benachrichtigungen aktiv ✓');
       } else {
-        setPushStatus('Kein Token erhalten — Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
+        setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
       }
-    } catch (e) {
-      console.error(e);
-      setPushStatus('Fehler beim Aktivieren: ' + e.message);
-    }
+    } catch (e) { setPushStatus('Fehler: ' + e.message); }
   }
 
-  enablePushBtn.addEventListener('click', registerServiceWorkerAndToken);
-
-  if (messaging) {
-    messaging.onMessage(payload => {
-      console.log('Nachricht im Vordergrund erhalten', payload);
-    });
-  }
+  enablePushBtn.addEventListener('click', registerPush);
+  if (messaging) messaging.onMessage(() => {});
 </script>
 </body>
 </html>
