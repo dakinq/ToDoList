@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wir zwei – To-dos</title>
+<title>Bauer sucht Aufgabe</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Unsere Todos">
+<meta name="apple-mobile-web-app-title" content="Bauer sucht Aufgabe">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;700&display=swap');
@@ -36,10 +36,13 @@
   }
 
   .sheet { width: 100%; max-width: 560px; }
-  header { text-align: center; margin-bottom: 20px; }
-  .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); font-weight: 700; }
-  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 40px; margin: 6px 0 4px; font-style: italic; }
-  .sub { font-size: 14px; color: #7a7268; }
+
+  /* Header */
+  header { text-align: center; margin-bottom: 24px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--sage); font-weight: 700; margin-bottom: 10px; }
+  .title-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
+  .header-logo { width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.12); }
+  h1 { font-family: 'Fraunces', serif; font-weight: 600; font-size: 34px; margin: 0; font-style: italic; line-height: 1.15; text-align: left; }
 
   .topbar { display: flex; justify-content: center; gap: 16px; align-items: center; margin-bottom: 20px; }
   .icon-btn { background: white; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 13px; cursor: pointer; color: var(--ink); font-family: 'Karla', sans-serif; }
@@ -51,7 +54,7 @@
   .login-box input:focus { border-color: var(--sage); }
   .remember-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #7a7268; }
   .remember-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--sage); }
-  .login-box button { border: none; background: var(--clay); color: white; border-radius: 8px; padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; transition: background 0.15s ease; }
+  .login-box button { border: none; background: var(--clay); color: white; border-radius: 8px; padding: 11px; font-family: 'Karla', sans-serif; font-weight: 700; font-size: 15px; cursor: pointer; transition: background 0.15s; }
   .login-box button:hover { background: #a1573f; }
   .login-error { color: var(--clay); font-size: 13px; text-align: center; min-height: 16px; }
 
@@ -69,11 +72,24 @@
 
   /* List */
   .list { display: flex; flex-direction: column; gap: 10px; }
-  .item { display: flex; align-items: flex-start; gap: 12px; background: white; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; animation: rise 0.25s ease; user-select: none; -webkit-user-select: none; }
+
+  .item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: white; border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px;
+    animation: rise 0.25s ease;
+    user-select: none; -webkit-user-select: none;
+    transition: background 0.2s, border-color 0.2s;
+  }
   @keyframes rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-  .item.done { opacity: 0.5; }
-  .item.overdue { border-color: var(--red); }
-  .item.pressing { background: #f0ebe4; }
+
+  /* Priorität färbt die ganze Kachel */
+  .item.prio-1 { background: #FDE8E5; border-color: #D4776B; }
+  .item.prio-2 { background: #FEF8E6; border-color: #C9A24B; }
+  .item.prio-3 { background: #EAF2E6; border-color: #7EAD72; }
+  .item.done { opacity: 0.45; }
+  .item.overdue { border-color: var(--red) !important; }
+  .item.pressing { filter: brightness(0.95); }
 
   .checkbox { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--sage); flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-top: 2px; background: white; transition: background 0.15s; }
   .checkbox.checked { background: var(--sage); }
@@ -82,29 +98,40 @@
   .item-body { flex: 1; min-width: 0; }
   .item-text { font-size: 15px; line-height: 1.4; word-break: break-word; }
   .item.done .item-text { text-decoration: line-through; }
+
   .meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
   .tag { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.02em; }
-  .tag.category { background: #E6EBE3; color: var(--sage); }
-  .tag.assignee { background: #F2E2DB; color: var(--clay); }
-  .tag.due { background: #EFE6D8; color: var(--gold); }
-  .tag.due.overdue { background: #F6DAD5; color: var(--red); }
-  .tag.prio1 { background: #F6DAD5; color: var(--red); }
-  .tag.prio2 { background: #FBF0D8; color: #A07820; }
-  .tag.prio3 { background: #E6EBE3; color: var(--sage); }
+  .tag.category { background: rgba(107,124,99,0.15); color: var(--sage); }
+  .tag.assignee { background: rgba(181,101,74,0.15); color: var(--clay); }
+
+  /* Datum prominent */
+  .date-badge {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(201,162,75,0.18); color: #8a6c1a;
+    border-radius: 8px; padding: 3px 10px;
+    letter-spacing: 0.01em;
+  }
+  .date-badge.overdue { background: rgba(178,58,46,0.15); color: var(--red); }
+  .date-badge-icon { font-size: 13px; }
+
+  /* Prio-Label klein neben dem Text */
+  .prio-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.65; }
 
   .del { border: none; background: transparent; color: #bbb1a3; font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 4px; flex-shrink: 0; }
   .del:hover { color: var(--clay); }
 
   .empty { text-align: center; padding: 48px 20px; color: #a89d8d; font-family: 'Fraunces', serif; font-style: italic; font-size: 17px; }
   .footer-note { text-align: center; font-size: 12px; color: #a89d8d; margin-top: 28px; }
+  .long-press-hint { text-align: center; font-size: 12px; color: #bbb1a3; margin-top: 10px; }
   .hidden { display: none !important; }
 
   /* Modals */
   .modal-overlay { position: fixed; inset: 0; background: rgba(46,42,38,0.4); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 10; }
   .modal { background: var(--paper); border-radius: 14px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
   .modal h2 { font-family: 'Fraunces', serif; font-style: italic; margin: 0; font-size: 22px; }
-  .modal-section { display: flex; flex-direction: column; gap: 8px; }
-  .modal-section label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sage); }
+  .modal-section { display: flex; flex-direction: column; gap: 6px; }
+  .modal-section label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--sage); }
   .modal input[type="text"], .modal input[type="date"], .modal select { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-family: 'Karla', sans-serif; font-size: 15px; outline: none; background: white; color: var(--ink); width: 100%; }
   .modal input:focus, .modal select:focus { border-color: var(--sage); }
   .modal-btn-row { display: flex; gap: 8px; }
@@ -118,16 +145,16 @@
   .add-row input { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-family: 'Karla', sans-serif; font-size: 14px; outline: none; background: white; }
   .add-row button { border: none; background: var(--sage); color: white; border-radius: 8px; padding: 0 14px; cursor: pointer; font-weight: 700; font-size: 18px; }
   .push-status { font-size: 12px; color: #7a7268; }
-
-  .long-press-hint { text-align: center; font-size: 12px; color: #bbb1a3; margin-top: 8px; }
 </style>
 </head>
 <body>
 <div class="sheet">
   <header>
-    <div class="eyebrow">Gemeinsam</div>
-    <h1>Unsere To-dos</h1>
-    <div class="sub" id="subline">Bitte anmelden</div>
+    <div class="eyebrow">Gemeinsam organisiert</div>
+    <div class="title-row">
+      <img src="apple-touch-icon.png" class="header-logo" alt="Logo">
+      <h1>Bauer sucht<br>Aufgabe</h1>
+    </div>
   </header>
 
   <!-- Login -->
@@ -278,10 +305,8 @@
   const DEFAULT_CATEGORIES = ['Freizeit', 'Einkauf', 'Haushalt', 'Sonstiges'];
   const DEFAULT_ASSIGNEES = ['Partner A', 'Partner B', 'Beide'];
 
-  // Elements
   const loginView = document.getElementById('loginView');
   const appView = document.getElementById('appView');
-  const subline = document.getElementById('subline');
   const emailInput = document.getElementById('emailInput');
   const passwordInput = document.getElementById('passwordInput');
   const rememberMe = document.getElementById('rememberMe');
@@ -317,9 +342,7 @@
   const saveEditBtn = document.getElementById('saveEditBtn');
 
   let unsubTodos = null, unsubCategories = null, unsubAssignees = null;
-  let categories = [], assignees = [];
-  let currentTodos = [];
-  let editingTodoId = null;
+  let categories = [], assignees = [], currentTodos = [], editingTodoId = null;
 
   // ---- Auth ----
   loginBtn.addEventListener('click', doLogin);
@@ -329,10 +352,8 @@
     loginError.textContent = '';
     loginBtn.disabled = true;
     try {
-      const persistence = rememberMe.checked
-        ? firebase.auth.Auth.Persistence.LOCAL
-        : firebase.auth.Auth.Persistence.SESSION;
-      await auth.setPersistence(persistence);
+      const p = rememberMe.checked ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+      await auth.setPersistence(p);
       await auth.signInWithEmailAndPassword(emailInput.value.trim(), passwordInput.value);
     } catch (e) {
       loginError.textContent = 'Anmeldung fehlgeschlagen. E-Mail oder Passwort prüfen.';
@@ -346,7 +367,6 @@
     if (user) {
       loginView.classList.add('hidden');
       appView.classList.remove('hidden');
-      subline.textContent = 'Angemeldet als ' + user.email;
       ensureDefaults().then(() => {
         subscribeToCategories();
         subscribeToAssignees();
@@ -355,7 +375,6 @@
     } else {
       loginView.classList.remove('hidden');
       appView.classList.add('hidden');
-      subline.textContent = 'Bitte anmelden';
       if (unsubTodos) { unsubTodos(); unsubTodos = null; }
       if (unsubCategories) { unsubCategories(); unsubCategories = null; }
       if (unsubAssignees) { unsubAssignees(); unsubAssignees = null; }
@@ -369,7 +388,6 @@
     if (!asgDoc.exists) await configRef.doc('assignees').set({ items: DEFAULT_ASSIGNEES });
   }
 
-  // ---- Config live sync ----
   function subscribeToCategories() {
     unsubCategories = configRef.doc('categories').onSnapshot(doc => {
       categories = (doc.exists && doc.data().items) || [];
@@ -438,29 +456,28 @@
       const todos = [];
       const now = Date.now();
       const oneDayMs = 24 * 60 * 60 * 1000;
-
       snapshot.forEach(doc => {
         const data = doc.data();
-        // Auto-delete erledigte To-dos nach 24h
         if (data.done && data.completedAt) {
-          const completedMs = data.completedAt.toMillis ? data.completedAt.toMillis() : 0;
-          if (now - completedMs > oneDayMs) {
-            todosRef.doc(doc.id).delete().catch(() => {});
-            return;
-          }
+          const ms = data.completedAt.toMillis ? data.completedAt.toMillis() : 0;
+          if (now - ms > oneDayMs) { todosRef.doc(doc.id).delete().catch(() => {}); return; }
         }
         todos.push({ id: doc.id, ...data });
       });
-
       currentTodos = todos;
       render(todos);
     });
   }
 
+  function formatDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+
   function render(todos) {
     listEl.innerHTML = '';
     if (todos.length === 0) {
-      listEl.innerHTML = '<div class="empty">Noch nichts auf der Liste — fügt euren ersten Punkt hinzu.</div>';
+      listEl.innerHTML = '<div class="empty">Noch nichts auf der Liste —<br>fügt euren ersten Punkt hinzu.</div>';
       return;
     }
     const today = new Date(); today.setHours(0,0,0,0);
@@ -475,23 +492,24 @@
       if (aDue && bDue) return aDue - bDue;
       if (aDue && !bDue) return -1;
       if (!aDue && bDue) return 1;
-      const aMs = a.createdAt ? a.createdAt.toMillis() : 0;
-      const bMs = b.createdAt ? b.createdAt.toMillis() : 0;
-      return aMs - bMs;
+      return (a.createdAt ? a.createdAt.toMillis() : 0) - (b.createdAt ? b.createdAt.toMillis() : 0);
     });
 
     for (const todo of sorted) {
-      const item = document.createElement('div');
       const dueDate = todo.dueDate ? new Date(todo.dueDate + 'T00:00:00') : null;
       const isOverdue = dueDate && !todo.done && dueDate < today;
-      item.className = 'item' + (todo.done ? ' done' : '') + (isOverdue ? ' overdue' : '');
 
-      // Long press
+      const item = document.createElement('div');
+      let cls = 'item';
+      if (todo.priority) cls += ' prio-' + todo.priority;
+      if (todo.done) cls += ' done';
+      if (isOverdue) cls += ' overdue';
+      item.className = cls;
       addLongPress(item, todo.id);
 
       const checkbox = document.createElement('div');
       checkbox.className = 'checkbox' + (todo.done ? ' checked' : '');
-      checkbox.onclick = (e) => { e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
+      checkbox.onclick = e => { e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
 
       const body = document.createElement('div');
       body.className = 'item-body';
@@ -504,29 +522,29 @@
       meta.className = 'meta';
 
       if (todo.priority) {
-        const prioTag = document.createElement('span');
-        prioTag.className = 'tag prio' + todo.priority;
-        prioTag.textContent = 'Prio ' + todo.priority;
-        meta.appendChild(prioTag);
+        const labels = { '1': '🔴 Prio 1', '2': '🟡 Prio 2', '3': '🟢 Prio 3' };
+        const prioEl = document.createElement('span');
+        prioEl.className = 'prio-label';
+        prioEl.textContent = labels[todo.priority] || '';
+        meta.appendChild(prioEl);
       }
       if (todo.category) {
-        const catTag = document.createElement('span');
-        catTag.className = 'tag category';
-        catTag.textContent = todo.category;
-        meta.appendChild(catTag);
+        const el = document.createElement('span');
+        el.className = 'tag category';
+        el.textContent = todo.category;
+        meta.appendChild(el);
       }
       if (todo.assignee) {
-        const asgTag = document.createElement('span');
-        asgTag.className = 'tag assignee';
-        asgTag.textContent = todo.assignee;
-        meta.appendChild(asgTag);
+        const el = document.createElement('span');
+        el.className = 'tag assignee';
+        el.textContent = todo.assignee;
+        meta.appendChild(el);
       }
       if (todo.dueDate) {
-        const dueTag = document.createElement('span');
-        dueTag.className = 'tag due' + (isOverdue ? ' overdue' : '');
-        const d = new Date(todo.dueDate + 'T00:00:00');
-        dueTag.textContent = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-        meta.appendChild(dueTag);
+        const el = document.createElement('div');
+        el.className = 'date-badge' + (isOverdue ? ' overdue' : '');
+        el.innerHTML = '<span class="date-badge-icon">📅</span>' + formatDate(todo.dueDate);
+        meta.appendChild(el);
       }
 
       body.appendChild(textDiv);
@@ -535,7 +553,7 @@
       const delBtn = document.createElement('button');
       delBtn.className = 'del';
       delBtn.innerHTML = '&times;';
-      delBtn.onclick = (e) => { e.stopPropagation(); deleteTodo(todo.id); };
+      delBtn.onclick = e => { e.stopPropagation(); deleteTodo(todo.id); };
 
       item.appendChild(checkbox);
       item.appendChild(body);
@@ -546,19 +564,9 @@
 
   // ---- Long press ----
   let longPressTimer = null;
-
   function addLongPress(el, todoId) {
-    const start = () => {
-      longPressTimer = setTimeout(() => {
-        el.classList.add('pressing');
-        openEditModal(todoId);
-        el.classList.remove('pressing');
-      }, 600);
-    };
-    const cancel = () => {
-      clearTimeout(longPressTimer);
-      el.classList.remove('pressing');
-    };
+    const start = () => { longPressTimer = setTimeout(() => { el.classList.add('pressing'); openEditModal(todoId); el.classList.remove('pressing'); }, 600); };
+    const cancel = () => { clearTimeout(longPressTimer); el.classList.remove('pressing'); };
     el.addEventListener('touchstart', start, { passive: true });
     el.addEventListener('touchend', cancel);
     el.addEventListener('touchmove', cancel);
@@ -579,11 +587,7 @@
     editModal.classList.remove('hidden');
   }
 
-  cancelEditBtn.addEventListener('click', () => {
-    editModal.classList.add('hidden');
-    editingTodoId = null;
-  });
-
+  cancelEditBtn.addEventListener('click', () => { editModal.classList.add('hidden'); editingTodoId = null; });
   saveEditBtn.addEventListener('click', async () => {
     const text = editTextInput.value.trim();
     if (!text || !editingTodoId) return;
@@ -598,9 +602,7 @@
       });
       editModal.classList.add('hidden');
       editingTodoId = null;
-    } catch (e) {
-      console.error('Bearbeiten fehlgeschlagen', e);
-    }
+    } catch (e) { console.error(e); }
   });
 
   // ---- Add / Toggle / Delete ----
@@ -609,18 +611,15 @@
 
   async function addTodo() {
     const text = textInput.value.trim();
-    if (!text) return;
-    const user = auth.currentUser;
-    if (!user) return;
+    if (!text || !auth.currentUser) return;
     const payload = {
       text, done: false,
       category: categoryInput.value || null,
       assignee: assigneeInput.value || null,
       dueDate: dueInput.value || null,
       priority: priorityInput.value || null,
-      notified: false,
-      completedAt: null,
-      authorEmail: user.email,
+      notified: false, completedAt: null,
+      authorEmail: auth.currentUser.email,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
     textInput.value = ''; dueInput.value = ''; priorityInput.value = '';
@@ -628,9 +627,7 @@
   }
 
   async function toggleTodo(id, done) {
-    const update = { done };
-    if (done) update.completedAt = firebase.firestore.FieldValue.serverTimestamp();
-    else update.completedAt = null;
+    const update = { done, completedAt: done ? firebase.firestore.FieldValue.serverTimestamp() : null };
     try { await todosRef.doc(id).update(update); } catch (e) { console.error(e); }
   }
 
@@ -641,26 +638,22 @@
   // ---- Push ----
   let messaging;
   try { messaging = firebase.messaging(); } catch (e) { messaging = null; }
-
-  function setPushStatus(text) { pushStatus.textContent = text; pushStatusModal.textContent = text; }
-
+  function setPushStatus(t) { pushStatus.textContent = t; pushStatusModal.textContent = t; }
   async function registerPush() {
-    if (!messaging) { setPushStatus('Push nicht unterstützt auf diesem Gerät.'); return; }
+    if (!messaging) { setPushStatus('Push nicht unterstützt.'); return; }
     try {
       const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') { setPushStatus('Benachrichtigungen nicht erlaubt.'); return; }
       const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
       if (token) {
-        const user = auth.currentUser;
-        await tokensRef.doc(token).set({ token, email: user ? user.email : null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        await tokensRef.doc(token).set({ token, email: auth.currentUser?.email || null, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
         setPushStatus('Push-Benachrichtigungen aktiv ✓');
       } else {
         setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
       }
     } catch (e) { setPushStatus('Fehler: ' + e.message); }
   }
-
   enablePushBtn.addEventListener('click', registerPush);
   if (messaging) messaging.onMessage(() => {});
 </script>
