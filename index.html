@@ -6,9 +6,11 @@
 <title>Bauer sucht Aufgabe</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Bauer sucht Aufgabe">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Karla:wght@400;500;700&display=swap');
 
@@ -159,14 +161,18 @@
 
   <!-- Login -->
   <div id="loginView" class="login-box">
-    <input id="emailInput" type="email" placeholder="E-Mail" autocomplete="username">
-    <input id="passwordInput" type="password" placeholder="Passwort" autocomplete="current-password">
-    <div class="remember-row">
-      <input type="checkbox" id="rememberMe" checked>
-      <label for="rememberMe">Angemeldet bleiben</label>
-    </div>
-    <button id="loginBtn">Anmelden</button>
-    <div class="login-error" id="loginError"></div>
+    <form onsubmit="return false">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <input id="emailInput" type="email" placeholder="E-Mail" autocomplete="username">
+        <input id="passwordInput" type="password" placeholder="Passwort" autocomplete="current-password">
+        <div class="remember-row">
+          <input type="checkbox" id="rememberMe" checked>
+          <label for="rememberMe">Angemeldet bleiben</label>
+        </div>
+        <button id="loginBtn" type="submit">Anmelden</button>
+        <div class="login-error" id="loginError"></div>
+      </div>
+    </form>
   </div>
 
   <!-- App -->
