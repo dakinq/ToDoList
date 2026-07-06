@@ -71,13 +71,14 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .photo-add-btn { border:1px dashed var(--line); background:var(--input-bg); color:var(--sub); border-radius:8px; padding:8px; font-family:'Karla',sans-serif; font-size:13px; cursor:pointer; text-align:center; }
 .composer button.add { border:none; background:var(--clay); color:white; border-radius:8px; padding:11px; font-family:'Karla',sans-serif; font-weight:700; font-size:15px; cursor:pointer; width:100%; }
 
-/* Filter */
-.filter-bar { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
+/* Search */
+.search-bar { overflow:hidden; max-height:0; opacity:0; transition:max-height .25s ease, opacity .2s ease; margin-bottom:0; }
+.search-bar.open { max-height:60px; opacity:1; margin-bottom:12px; }
 .search-input { border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-family:'Karla',sans-serif; font-size:14px; outline:none; background:var(--card); color:var(--ink); width:100%; box-shadow:var(--shadow); }
 .search-input:focus { border-color:var(--sage); }
-.filter-chips { display:flex; gap:6px; flex-wrap:wrap; }
-.filter-chip { border:1px solid var(--line); background:var(--card); border-radius:20px; padding:4px 12px; font-size:12px; font-weight:700; cursor:pointer; color:var(--sub); transition:all .15s; }
-.filter-chip.active { background:var(--sage); border-color:var(--sage); color:white; }
+.icon-btn.active { background:var(--sage); border-color:var(--sage); color:white; }
+.settings-fab { position:fixed; top:14px; right:14px; z-index:9; background:var(--card); border:1px solid var(--line); border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 10px rgba(0,0,0,0.14); cursor:pointer; font-size:19px; color:var(--ink); transition:box-shadow .15s; }
+.settings-fab:hover { box-shadow:0 3px 14px rgba(0,0,0,0.2); }
 
 /* List */
 .list { display:flex; flex-direction:column; gap:10px; }
@@ -115,7 +116,7 @@ body.dark .item.prio-3 { background:#162318; border-color:#3E7035; }
 .tag { font-size:11px; font-weight:700; padding:2px 8px; border-radius:20px; }
 .tag.category { background:rgba(107,124,99,0.18); color:var(--sage); }
 .tag.assignee { background:rgba(181,101,74,0.18); color:var(--clay); }
-.tag.recurring { background:rgba(201,162,75,0.18); color:var(--gold); }
+.tag.recurring { background:rgba(46,42,38,0.09); color:var(--ink); }
 .date-badge { display:flex; align-items:center; gap:3px; font-size:12px; font-weight:700; background:rgba(201,162,75,0.18); color:#8a6c1a; border-radius:8px; padding:3px 10px; }
 body.dark .date-badge { color:var(--gold); }
 .date-badge.overdue { background:rgba(178,58,46,0.15); color:var(--red); }
@@ -158,6 +159,9 @@ body.dark .date-badge { color:var(--gold); }
     </div>
   </header>
 
+  <!-- Settings FAB -->
+  <button class="settings-fab" id="settingsBtn">⚙</button>
+
   <!-- Login -->
   <div id="loginView" class="login-box">
     <form onsubmit="return false">
@@ -181,9 +185,7 @@ body.dark .date-badge { color:var(--gold); }
 
     <!-- Topbar -->
     <div class="topbar">
-      <button class="icon-btn" id="settingsBtn">⚙ Einstellungen</button>
-      <button class="icon-btn" id="darkModeBtn">🌙</button>
-      <button class="icon-btn" id="signoutBtn">Abmelden</button>
+      <button class="icon-btn" id="searchToggleBtn">🔍</button>
     </div>
 
     <!-- Composer -->
@@ -241,10 +243,9 @@ body.dark .date-badge { color:var(--gold); }
       <button class="add" id="addBtn" type="button">Hinzufügen</button>
     </div>
 
-    <!-- Filter -->
-    <div class="filter-bar">
-      <input type="search" id="searchInput" class="search-input" placeholder="🔍 Suchen...">
-      <div class="filter-chips" id="filterChips"></div>
+    <!-- Search -->
+    <div class="search-bar" id="searchBar">
+      <input type="search" id="searchInput" class="search-input" placeholder="Suchen...">
     </div>
 
     <div class="list" id="list"></div>
@@ -276,6 +277,14 @@ body.dark .date-badge { color:var(--gold); }
       <label>Erinnerungen</label>
       <button class="secondary" id="enablePushBtn">Push-Benachrichtigungen aktivieren</button>
       <div class="push-status" id="pushStatusModal"></div>
+    </div>
+    <div class="modal-section">
+      <label>Darstellung</label>
+      <button class="secondary" id="darkModeSettingsBtn">🌙 Dunkelmodus ein/aus</button>
+    </div>
+    <div class="modal-section">
+      <label>Account</label>
+      <button class="danger" id="signoutSettingsBtn">Abmelden</button>
     </div>
     <button class="primary" id="closeSettingsBtn">Fertig</button>
   </div>
@@ -369,15 +378,15 @@ const DEFAULT_ASSIGNEES  = ['Partner A','Partner B','Beide'];
 const $=id=>document.getElementById(id);
 const loginView=$('loginView'), appView=$('appView');
 const emailInput=$('emailInput'), passwordInput=$('passwordInput'), rememberMe=$('rememberMe');
-const loginBtn=$('loginBtn'), loginError=$('loginError'), signoutBtn=$('signoutBtn');
+const loginBtn=$('loginBtn'), loginError=$('loginError');
 const textInput=$('textInput'), categoryInput=$('categoryInput'), assigneeInput=$('assigneeInput');
 const priorityInput=$('priorityInput'), dueInput=$('dueInput'), notesInput=$('notesInput');
 const recurringInput=$('recurringInput'), addBtn=$('addBtn');
 const moreOptsBtn=$('moreOptsBtn'), extraOpts=$('extraOpts');
 const photoAddBtn=$('photoAddBtn'), photoInput=$('photoInput'), photoPreview=$('photoPreview');
-const listEl=$('list'), searchInput=$('searchInput'), filterChips=$('filterChips');
-const statsBar=$('statsBar'), darkModeBtn=$('darkModeBtn');
-const settingsBtn=$('settingsBtn'), settingsModal=$('settingsModal'), closeSettingsBtn=$('closeSettingsBtn');
+const listEl=$('list'), searchInput=$('searchInput'), searchBar=$('searchBar'), searchToggleBtn=$('searchToggleBtn');
+const statsBar=$('statsBar');
+const settingsBtn=$('settingsBtn'), settingsModal=$('settingsModal'), closeSettingsBtn=$('closeSettingsBtn'), darkModeSettingsBtn=$('darkModeSettingsBtn'), signoutSettingsBtn=$('signoutSettingsBtn');
 const categoryChips=$('categoryChips'), assigneeChips=$('assigneeChips');
 const newCategoryInput=$('newCategoryInput'), newAssigneeInput=$('newAssigneeInput');
 const addCategoryBtn=$('addCategoryBtn'), addAssigneeBtn=$('addAssigneeBtn');
@@ -400,12 +409,12 @@ function initDarkMode(){
   const saved=localStorage.getItem('darkMode');
   const prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;
   if(saved==='true'||(saved===null&&prefersDark)) document.body.classList.add('dark');
-  darkModeBtn.textContent=document.body.classList.contains('dark')?'☀️':'🌙';
+
 }
-darkModeBtn.addEventListener('click',()=>{
+darkModeSettingsBtn.addEventListener('click',()=>{
   document.body.classList.toggle('dark');
   localStorage.setItem('darkMode',document.body.classList.contains('dark'));
-  darkModeBtn.textContent=document.body.classList.contains('dark')?'☀️':'🌙';
+  darkModeSettingsBtn.textContent=document.body.classList.contains('dark')?'☀️ Dunkelmodus aus':'🌙 Dunkelmodus ein/aus';
 });
 initDarkMode();
 
@@ -470,7 +479,7 @@ async function doLogin(){
   }catch(e){ loginError.textContent='Anmeldung fehlgeschlagen. E-Mail oder Passwort prüfen.'; }
   loginBtn.disabled=false;
 }
-signoutBtn.addEventListener('click',()=>auth.signOut());
+signoutSettingsBtn.addEventListener('click',()=>{auth.signOut(); settingsModal.classList.add('hidden');});
 
 auth.onAuthStateChanged(user=>{
   if(user){
@@ -495,14 +504,14 @@ function subscribeToCategories(){
   unsubCat=configRef.doc('categories').onSnapshot(doc=>{
     categories=(doc.exists&&doc.data().items)||[];
     renderSelect(categoryInput,categories); renderSelect(editCategoryInput,categories);
-    renderChips(categoryChips,categories,removeCategory); renderFilterChips();
+    renderChips(categoryChips,categories,removeCategory);
   });
 }
 function subscribeToAssignees(){
   unsubAsg=configRef.doc('assignees').onSnapshot(doc=>{
     assignees=(doc.exists&&doc.data().items)||[];
     renderSelect(assigneeInput,assignees); renderSelect(editAssigneeInput,assignees);
-    renderChips(assigneeChips,assignees,removeAssignee); renderFilterChips();
+    renderChips(assigneeChips,assignees,removeAssignee);
   });
 }
 function renderSelect(el,items,selected){
@@ -535,30 +544,13 @@ settingsBtn.addEventListener('click',()=>settingsModal.classList.remove('hidden'
 closeSettingsBtn.addEventListener('click',()=>settingsModal.classList.add('hidden'));
 
 // ---- Filter chips ----
-function renderFilterChips(){
-  filterChips.innerHTML='';
-  const prioOpts=[{v:'1',l:'🔴 Prio 1'},{v:'2',l:'🟡 Prio 2'},{v:'3',l:'🟢 Prio 3'}];
-  const allGroups=[
-    {label:'Alle',type:'all'},
-    ...categories.map(c=>({label:c,type:'category',val:c})),
-    ...assignees.map(a=>({label:a,type:'assignee',val:a})),
-    ...prioOpts.map(p=>({label:p.l,type:'priority',val:p.v}))
-  ];
-  allGroups.forEach(g=>{
-    const chip=document.createElement('button');
-    chip.className='filter-chip'; chip.textContent=g.label;
-    const isActive=g.type==='all'
-      ?(!activeFilter.category&&!activeFilter.assignee&&!activeFilter.priority)
-      :(activeFilter[g.type]===g.val);
-    if(isActive) chip.classList.add('active');
-    chip.onclick=()=>{
-      if(g.type==='all'){ activeFilter={search:activeFilter.search,category:null,assignee:null,priority:null}; }
-      else { activeFilter[g.type]=activeFilter[g.type]===g.val?null:g.val; }
-      renderFilterChips(); render(currentTodos);
-    };
-    filterChips.appendChild(chip);
-  });
-}
+// Search toggle
+searchToggleBtn.addEventListener('click',()=>{
+  const open=searchBar.classList.toggle('open');
+  searchToggleBtn.classList.toggle('active',open);
+  if(open){ setTimeout(()=>searchInput.focus(),50); }
+  else { searchInput.value=''; activeFilter.search=''; render(currentTodos); }
+});
 searchInput.addEventListener('input',()=>{ activeFilter.search=searchInput.value; render(currentTodos); });
 
 function applyFilters(todos){
@@ -705,7 +697,7 @@ function render(todos){
     if(todo.dueDate){
       const db2=document.createElement('div');
       db2.className='date-badge'+(overdue?' overdue':'');
-      db2.innerHTML='<span>📅</span>'+formatDate(todo.dueDate);
+      db2.textContent=formatDate(todo.dueDate);
       meta.appendChild(db2);
     }
     body.appendChild(meta);
