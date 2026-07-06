@@ -3,6 +3,7 @@
   "short_name": "Bauer sucht Aufgabe",
   "start_url": "./index.html",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#F7F3ED",
   "theme_color": "#B5654A",
   "icons": [

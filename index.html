@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bauer sucht Aufgabe</title>
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +27,7 @@ body.dark {
   --sage: #7E9474; --clay: #C97560; --gold: #D4AD58; --red: #C94A3C;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body { margin:0; background:var(--paper); color:var(--ink); font-family:'Karla',sans-serif; min-height:100vh; display:flex; justify-content:center; padding:28px 14px 80px; transition:background .25s,color .25s; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:'Karla',sans-serif; min-height:100vh; display:flex; justify-content:center; padding:70px 14px 80px; transition:background .25s,color .25s; }
 .sheet { width:100%; max-width:560px; }
 
 /* Header */
@@ -42,9 +42,9 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .stat-chip span { color:var(--sage); }
 
 /* Topbar */
-.topbar { display:flex; justify-content:center; gap:8px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
-.icon-btn { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink); font-family:'Karla',sans-serif; box-shadow:var(--shadow); transition:border-color .15s; }
-.icon-btn:hover { border-color:var(--sage); }
+
+
+
 
 /* Login */
 .login-box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:28px 24px; box-shadow:var(--shadow); }
@@ -72,13 +72,15 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .composer button.add { border:none; background:var(--clay); color:white; border-radius:8px; padding:11px; font-family:'Karla',sans-serif; font-weight:700; font-size:15px; cursor:pointer; width:100%; }
 
 /* Search */
-.search-bar { overflow:hidden; max-height:0; opacity:0; transition:max-height .25s ease, opacity .2s ease; margin-bottom:0; }
-.search-bar.open { max-height:60px; opacity:1; margin-bottom:12px; }
-.search-input { border:1px solid var(--line); border-radius:10px; padding:10px 14px; font-family:'Karla',sans-serif; font-size:14px; outline:none; background:var(--card); color:var(--ink); width:100%; box-shadow:var(--shadow); }
+.search-container { position:fixed; top:14px; left:14px; right:70px; z-index:9; display:flex; align-items:center; gap:0; }
+.search-fab { width:44px; height:44px; border-radius:50%; background:var(--card); border:1px solid var(--line); box-shadow:0 2px 10px rgba(0,0,0,0.14); font-size:18px; cursor:pointer; flex-shrink:0; color:var(--ink); transition:background .15s,color .15s; display:flex; align-items:center; justify-content:center; }
+.search-fab.active { background:var(--sage); border-color:var(--sage); color:white; }
+.search-expand { max-width:0; overflow:hidden; opacity:0; transition:max-width .3s ease, opacity .25s ease; margin-left:0; flex:1; }
+.search-expand.open { max-width:320px; opacity:1; margin-left:8px; }
+.search-input { width:100%; max-width:320px; border:1px solid var(--line); border-radius:22px; padding:10px 16px; font-family:'Karla',sans-serif; font-size:14px; outline:none; background:var(--card); color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,0.1); display:block; box-sizing:border-box; }
 .search-input:focus { border-color:var(--sage); }
-.icon-btn.active { background:var(--sage); border-color:var(--sage); color:white; }
-.settings-fab { position:fixed; top:14px; right:14px; z-index:9; background:var(--card); border:1px solid var(--line); border-radius:50%; width:44px; height:44px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 10px rgba(0,0,0,0.14); cursor:pointer; font-size:19px; color:var(--ink); transition:box-shadow .15s; }
-.settings-fab:hover { box-shadow:0 3px 14px rgba(0,0,0,0.2); }
+.settings-fab { position:fixed; top:14px; right:14px; z-index:9; background:transparent; border:none; width:44px; height:44px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:22px; color:var(--ink); transition:opacity .15s; box-shadow:none; }
+.settings-fab:hover { opacity:0.65; }
 
 /* List */
 .list { display:flex; flex-direction:column; gap:10px; }
@@ -94,12 +96,8 @@ body.dark .item.prio-2 { background:#2D2510; border-color:#8B6E20; }
 body.dark .item.prio-3 { background:#162318; border-color:#3E7035; }
 .item.done { opacity:.45; }
 .item.overdue { border-color:var(--red) !important; }
-
-.swipe-bg { position:absolute; top:0; bottom:0; display:flex; align-items:center; padding:0 18px; font-size:13px; font-weight:700; opacity:0; transition:opacity .15s; pointer-events:none; }
-.swipe-bg.left { right:0; color:var(--red); }
-.swipe-bg.right { left:0; color:var(--sage); }
-.item.swiping-left .swipe-bg.left { opacity:1; }
-.item.swiping-right .swipe-bg.right { opacity:1; }
+.item.deleted { opacity:.5; }
+.restore-btn { border:1px solid var(--line); background:var(--card); color:var(--sage); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 
 .item-content { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:inherit; position:relative; z-index:1; transition:transform .1s ease; user-select:none; -webkit-user-select:none; }
 .checkbox { width:22px; height:22px; border-radius:50%; border:2px solid var(--sage); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:2px; background:var(--card); transition:background .15s; }
@@ -160,7 +158,7 @@ body.dark .date-badge { color:var(--gold); }
   </header>
 
   <!-- Settings FAB -->
-  <button class="settings-fab" id="settingsBtn">⚙</button>
+  <button class="settings-fab" id="settingsBtn">☰</button>
 
   <!-- Login -->
   <div id="loginView" class="login-box">
@@ -249,7 +247,7 @@ body.dark .date-badge { color:var(--gold); }
     </div>
 
     <div class="list" id="list"></div>
-    <div class="long-press-hint">Lang drücken zum Bearbeiten · Wischen zum Erledigen/Löschen</div>
+    <div class="long-press-hint">Lang drücken zum Bearbeiten</div>
   </div>
 </div>
 
@@ -418,6 +416,17 @@ darkModeSettingsBtn.addEventListener('click',()=>{
 });
 initDarkMode();
 
+// Bildschirmdrehung sperren (funktioniert v.a. als installierte App / unterstützende Browser)
+function lockOrientation(){
+  try{
+    if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('portrait').catch(()=>{});
+    }
+  }catch(e){}
+}
+lockOrientation();
+window.addEventListener('orientationchange', ()=>{ setTimeout(lockOrientation, 200); });
+
 // ---- Photo resize ----
 function resizeImage(file){
   return new Promise(res=>{
@@ -548,7 +557,7 @@ closeSettingsBtn.addEventListener('click',()=>settingsModal.classList.add('hidde
 searchToggleBtn.addEventListener('click',()=>{
   const open=searchBar.classList.toggle('open');
   searchToggleBtn.classList.toggle('active',open);
-  if(open){ setTimeout(()=>searchInput.focus(),50); }
+  if(open){ setTimeout(()=>searchInput.focus(),300); }
   else { searchInput.value=''; activeFilter.search=''; render(currentTodos); }
 });
 searchInput.addEventListener('input',()=>{ activeFilter.search=searchInput.value; render(currentTodos); });
@@ -607,7 +616,10 @@ function subscribeToTodos(){
     const todos=[]; const now=Date.now(); const day=86400000;
     snap.forEach(doc=>{
       const d=doc.data();
-      if(d.done&&d.completedAt){
+      if(d.deleted&&d.deletedAt){
+        const ms=d.deletedAt.toMillis?d.deletedAt.toMillis():0;
+        if(now-ms>day){todosRef.doc(doc.id).delete().catch(()=>{});return;}
+      } else if(d.done&&d.completedAt){
         const ms=d.completedAt.toMillis?d.completedAt.toMillis():0;
         if(now-ms>day){todosRef.doc(doc.id).delete().catch(()=>{});return;}
       }
@@ -639,6 +651,7 @@ function render(todos){
   }
   const today=new Date(); today.setHours(0,0,0,0);
   const sorted=[...filtered].sort((a,b)=>{
+    if(!!a.deleted!==!!b.deleted) return a.deleted?1:-1;
     if(a.done!==b.done) return a.done?1:-1;
     const ap=a.priority?parseInt(a.priority):99, bp=b.priority?parseInt(b.priority):99;
     if(ap!==bp) return ap-bp;
@@ -655,17 +668,17 @@ function render(todos){
     let cls='item';
     if(todo.priority) cls+=' prio-'+todo.priority;
     if(todo.done) cls+=' done';
+    if(todo.deleted) cls+=' deleted';
     if(overdue) cls+=' overdue';
     wrapper.className=cls;
-
-    wrapper.innerHTML='<div class="swipe-bg right">✓ Erledigt</div><div class="swipe-bg left">🗑 Löschen</div>';
 
     const content=document.createElement('div');
     content.className='item-content';
 
     const cb=document.createElement('div');
     cb.className='checkbox'+(todo.done?' checked':'');
-    cb.onclick=e=>{e.stopPropagation();toggleTodo(todo.id,!todo.done);};
+    cb.onclick=e=>{e.stopPropagation();if(!todo.deleted)toggleTodo(todo.id,!todo.done);};
+    if(todo.deleted) cb.style.visibility='hidden';
 
     const body=document.createElement('div');
     body.className='item-body';
@@ -700,51 +713,48 @@ function render(todos){
       db2.textContent=formatDate(todo.dueDate);
       meta.appendChild(db2);
     }
+    if(todo.deleted){
+      const dtag=document.createElement('span'); dtag.className='tag'; dtag.style.background='rgba(178,58,46,0.15)'; dtag.style.color='var(--red)';
+      dtag.textContent='Gelöscht'; meta.appendChild(dtag);
+    }
     body.appendChild(meta);
 
-    const del=document.createElement('button');
-    del.className='del'; del.innerHTML='&times;';
-    del.onclick=e=>{e.stopPropagation();deleteTodo(todo.id);};
+    let actionBtn;
+    if(todo.deleted){
+      actionBtn=document.createElement('button');
+      actionBtn.className='restore-btn'; actionBtn.textContent='Wiederherstellen';
+      actionBtn.onclick=e=>{e.stopPropagation();restoreTodo(todo.id);};
+    } else {
+      actionBtn=document.createElement('button');
+      actionBtn.className='del'; actionBtn.innerHTML='&times;';
+      actionBtn.onclick=e=>{e.stopPropagation();deleteTodo(todo.id);};
+    }
 
-    content.appendChild(cb); content.appendChild(body); content.appendChild(del);
+    content.appendChild(cb); content.appendChild(body); content.appendChild(actionBtn);
     wrapper.appendChild(content);
-    addGestures(wrapper,content,todo.id);
+    if(!todo.deleted) addGestures(wrapper,content,todo.id);
     listEl.appendChild(wrapper);
   });
 }
 
-// ---- Swipe ----
+// ---- Long press (edit) ----
 function addGestures(wrapper,content,todoId){
-  let sx=0,sy=0,dx=0,swiping=false,longTimer=null;
+  let longTimer=null, moved=false, sx=0, sy=0;
 
   wrapper.addEventListener('touchstart',e=>{
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY; dx=0; swiping=false;
-    longTimer=setTimeout(()=>openEditModal(todoId),650);
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved=false;
+    longTimer=setTimeout(()=>{ if(!moved) openEditModal(todoId); },600);
   },{passive:true});
 
   wrapper.addEventListener('touchmove',e=>{
-    const mx=e.touches[0].clientX-sx, my=e.touches[0].clientY-sy;
-    if(!swiping&&Math.abs(my)>Math.abs(mx)) return;
-    swiping=true; clearTimeout(longTimer); dx=mx;
-    const clamped=Math.max(-110,Math.min(110,dx));
-    content.style.transform='translateX('+clamped+'px)';
-    wrapper.classList.toggle('swiping-left',dx<-30);
-    wrapper.classList.toggle('swiping-right',dx>30);
+    const mx=Math.abs(e.touches[0].clientX-sx), my=Math.abs(e.touches[0].clientY-sy);
+    if(mx>10||my>10){ moved=true; clearTimeout(longTimer); }
   },{passive:true});
 
-  wrapper.addEventListener('touchend',()=>{
-    clearTimeout(longTimer);
-    content.style.transform=''; wrapper.classList.remove('swiping-left','swiping-right');
-    if(swiping){
-      if(dx<-80) deleteTodo(todoId);
-      else if(dx>80){ const t=currentTodos.find(t=>t.id===todoId); if(t) toggleTodo(todoId,!t.done); }
-    }
-    swiping=false; dx=0;
-  });
+  wrapper.addEventListener('touchend',()=>clearTimeout(longTimer));
 
-  // Desktop long press
   let mTimer=null;
-  wrapper.addEventListener('mousedown',()=>{ mTimer=setTimeout(()=>openEditModal(todoId),650); });
+  wrapper.addEventListener('mousedown',()=>{ mTimer=setTimeout(()=>openEditModal(todoId),600); });
   wrapper.addEventListener('mouseup',()=>clearTimeout(mTimer));
   wrapper.addEventListener('mouseleave',()=>clearTimeout(mTimer));
 }
@@ -790,6 +800,7 @@ async function addTodo(){
     category:categoryInput.value||null, assignee:assigneeInput.value||null,
     dueDate:dueInput.value||null, priority:priorityInput.value||null,
     recurring:recurringInput.value||null, notified:false, completedAt:null,
+    notifiedCreation:false, notifiedCompletion:true,
     photo:newPhotoBase64||null, authorEmail:auth.currentUser.email,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
@@ -803,7 +814,12 @@ async function addTodo(){
 async function toggleTodo(id,done){
   const todo=currentTodos.find(t=>t.id===id); if(!todo) return;
   try{
-    await todosRef.doc(id).update({done,completedAt:done?firebase.firestore.FieldValue.serverTimestamp():null});
+    await todosRef.doc(id).update({
+      done,
+      completedAt:done?firebase.firestore.FieldValue.serverTimestamp():null,
+      completedByEmail:done?(auth.currentUser?auth.currentUser.email:null):null,
+      notifiedCompletion:done?false:true
+    });
     if(done) await recordCompletion(true);
     else await recordCompletion(false);
     if(done&&todo.recurring&&todo.recurring!==''){
@@ -820,7 +836,11 @@ async function toggleTodo(id,done){
 }
 
 async function deleteTodo(id){
-  try{ await todosRef.doc(id).delete(); }catch(e){console.error(e);}
+  try{ await todosRef.doc(id).update({deleted:true,deletedAt:firebase.firestore.FieldValue.serverTimestamp()}); }catch(e){console.error(e);}
+}
+
+async function restoreTodo(id){
+  try{ await todosRef.doc(id).update({deleted:false,deletedAt:null}); }catch(e){console.error(e);}
 }
 
 // ---- Push ----
