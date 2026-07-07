@@ -130,6 +130,15 @@ body.dark .date-badge { color:var(--gold); }
 
 .empty { text-align:center; padding:48px 20px; color:var(--sub); font-family:'Fraunces',serif; font-style:italic; font-size:17px; }
 .long-press-hint { text-align:center; font-size:12px; color:#bbb1a3; margin-top:10px; }
+
+/* Trenner + aufklappbarer Erledigt-Bereich */
+.done-divider { display:flex; align-items:center; gap:10px; margin:16px 0 8px; cursor:pointer; user-select:none; -webkit-user-select:none; }
+.done-divider-line { flex:1; height:1px; background:var(--line); }
+.done-divider-label { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--sub); white-space:nowrap; display:flex; align-items:center; gap:6px; }
+.done-divider-arrow { font-size:10px; transition:transform .25s ease; display:inline-block; }
+.done-divider-arrow.open { transform:rotate(180deg); }
+.done-section { overflow:hidden; max-height:0; transition:max-height .35s ease; display:flex; flex-direction:column; gap:10px; }
+.done-section.open { max-height:9999px; }
 .hidden { display:none !important; }
 
 /* Modals */
@@ -780,7 +789,11 @@ function render(todos){
     return (a.createdAt?a.createdAt.toMillis():0)-(b.createdAt?b.createdAt.toMillis():0);
   });
 
-  sorted.forEach(todo=>{
+  // Aktive und erledigte/gelöschte trennen
+  const activeTodos  = sorted.filter(t => !t.done && !t.deleted);
+  const finishedTodos = sorted.filter(t => t.done || t.deleted);
+
+  function buildItem(todo){
     const due=todo.dueDate?new Date(todo.dueDate+'T00:00:00'):null;
     const overdue=due&&!todo.done&&due<today;
 
@@ -853,8 +866,40 @@ function render(todos){
     content.appendChild(cb); content.appendChild(body); content.appendChild(actionBtn);
     wrapper.appendChild(content);
     if(!todo.deleted) addGestures(wrapper,content,todo.id);
-    listEl.appendChild(wrapper);
-  });
+    return wrapper;
+  }
+
+  // Aktive Einträge direkt rendern
+  activeTodos.forEach(todo => listEl.appendChild(buildItem(todo)));
+
+  // Erledigte/Gelöschte unter aufklappbarem Trenner
+  if(finishedTodos.length > 0){
+    const divider = document.createElement('div');
+    divider.className = 'done-divider';
+    const line1 = document.createElement('div'); line1.className='done-divider-line';
+    const label = document.createElement('div'); label.className='done-divider-label';
+    const arrow = document.createElement('span'); arrow.className='done-divider-arrow';
+    arrow.textContent='▼';
+    label.innerHTML='<span>Erledigt &amp; Gelöscht ('+finishedTodos.length+')</span>';
+    label.appendChild(arrow);
+    const line2 = document.createElement('div'); line2.className='done-divider-line';
+    divider.appendChild(line1); divider.appendChild(label); divider.appendChild(line2);
+
+    const section = document.createElement('div');
+    section.className = 'done-section';
+    // Standard: eingeklappt – nur aufklappen wenn sessionStorage es merkt
+    if(sessionStorage.getItem('doneOpen')==='1'){ section.classList.add('open'); arrow.classList.add('open'); }
+
+    divider.addEventListener('click',()=>{
+      const open = section.classList.toggle('open');
+      arrow.classList.toggle('open', open);
+      sessionStorage.setItem('doneOpen', open?'1':'0');
+    });
+
+    finishedTodos.forEach(todo => section.appendChild(buildItem(todo)));
+    listEl.appendChild(divider);
+    listEl.appendChild(section);
+  }
 }
 
 // ---- Long press (edit) ----
