@@ -589,10 +589,12 @@ function subscribeToUsernames(){
   configRef.doc('usernames').onSnapshot(doc=>{
     usernameMap=(doc.exists&&doc.data())||{};
     renderUsernameFields();
+    renderStatsBar();
   });
   configRef.doc('users').onSnapshot(doc=>{
     knownUsers=(doc.exists&&doc.data())||{};
     renderUsernameFields();
+    renderStatsBar();
   });
 }
 
@@ -707,29 +709,33 @@ function safeEmail(email){ return (email||'').replace(/[.@]/g,'_'); }
 
 let usernameMap = {};
 let knownUsers = {};
+let latestStatsData = {};
 
 function getDisplayName(email){
   if(!email) return '—';
   return usernameMap[email] || email.split('@')[0];
 }
 
+function renderStatsBar(){
+  const data=latestStatsData;
+  const entries=Object.entries(data);
+  statsBar.innerHTML='';
+  if(entries.length===0){ statsBar.innerHTML='<span class="stat-chip">Diese Woche: noch nichts erledigt</span>'; return; }
+  entries.forEach(([key,count])=>{
+    const email=knownUsers[key]||key;
+    const name=getDisplayName(email);
+    const chip=document.createElement('div'); chip.className='stat-chip'; chip.style.cursor='pointer'; chip.title='Report anzeigen';
+    chip.innerHTML=escapeHtml(name)+': <span>'+count+' ✓</span>';
+    chip.onclick=()=>openReportForEmail(email, name);
+    statsBar.appendChild(chip);
+  });
+}
+
 function subscribeToStats(){
   const week=getWeekKey();
   unsubStats=statsRef.doc(week).onSnapshot(doc=>{
-    const data=(doc.exists&&doc.data())||{};
-    const user=auth.currentUser;
-    const myKey=user?safeEmail(user.email):'';
-    const entries=Object.entries(data);
-    statsBar.innerHTML='';
-    if(entries.length===0){ statsBar.innerHTML='<span class="stat-chip">Diese Woche: noch nichts erledigt</span>'; return; }
-    entries.forEach(([key,count])=>{
-      const email=knownUsers[key]||key;
-      const name=getDisplayName(email);
-      const chip=document.createElement('div'); chip.className='stat-chip'; chip.style.cursor='pointer'; chip.title='Report anzeigen';
-      chip.innerHTML=escapeHtml(name)+': <span>'+count+' ✓</span>';
-      chip.onclick=()=>openReportForEmail(email, name);
-      statsBar.appendChild(chip);
-    });
+    latestStatsData=(doc.exists&&doc.data())||{};
+    renderStatsBar();
   });
 }
 async function recordCompletion(done){
