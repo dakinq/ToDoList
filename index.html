@@ -664,8 +664,18 @@ async function recordCompletion(done){
 function subscribeToTodos(){
   if(unsubTodos) unsubTodos();
   unsubTodos=todosRef.onSnapshot(snap=>{
-    const todos=[];
-    snap.forEach(doc=>{ todos.push({id:doc.id,...doc.data()}); });
+    const todos=[]; const now=Date.now(); const week=7*86400000;
+    snap.forEach(doc=>{
+      const d=doc.data();
+      if(d.deleted&&d.deletedAt){
+        const ms=d.deletedAt.toMillis?d.deletedAt.toMillis():0;
+        if(now-ms>week){todosRef.doc(doc.id).delete().catch(()=>{});return;}
+      } else if(d.done&&d.completedAt){
+        const ms=d.completedAt.toMillis?d.completedAt.toMillis():0;
+        if(now-ms>week){todosRef.doc(doc.id).delete().catch(()=>{});return;}
+      }
+      todos.push({id:doc.id,...d});
+    });
     currentTodos=todos; render(todos);
   });
 }
