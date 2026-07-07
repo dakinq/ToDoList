@@ -10,31 +10,9 @@ function todayDateString() {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function deleteOldCompleted() {
-  const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - 24 * 60 * 60 * 1000);
-
-  const completedSnap = await db.collection('todos')
-    .where('done', '==', true)
-    .where('completedAt', '<', cutoff)
-    .get();
-
-  const deletedSnap = await db.collection('todos')
-    .where('deleted', '==', true)
-    .where('deletedAt', '<', cutoff)
-    .get();
-
-  let count = 0;
-  const batch = db.batch();
-  completedSnap.forEach(doc => { batch.delete(doc.ref); count++; });
-  deletedSnap.forEach(doc => { batch.delete(doc.ref); count++; });
-
-  if (count > 0) {
-    await batch.commit();
-    console.log(`${count} To-do(s) (erledigt/gelöscht) endgültig entfernt.`);
-  } else {
-    console.log('Nichts zum endgültigen Entfernen.');
-  }
-}
+// Hinweis: Das automatische Löschen wurde entfernt.
+// Erledigte/gelöschte To-dos werden jetzt ausschließlich manuell
+// über die Einstellungen in der App aufgeräumt.
 
 async function getTokensExcept(excludeEmail) {
   const snapshot = await db.collection('tokens').get();
@@ -135,7 +113,6 @@ async function sendCompletionNotifications() {
 }
 
 async function main() {
-  await deleteOldCompleted();
   await sendDueReminders();
   await sendCreationNotifications();
   await sendCompletionNotifications();
