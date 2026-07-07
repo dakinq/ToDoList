@@ -285,6 +285,11 @@ body.dark .date-badge { color:var(--gold); }
       <div class="push-status" id="pushStatusModal"></div>
     </div>
     <div class="modal-section">
+      <label>Namen zuweisen</label>
+      <div id="usernameFields" style="display:flex;flex-direction:column;gap:4px;"></div>
+    </div>
+
+    <div class="modal-section">
       <label>Aufräumen</label>
       <select id="cleanupThreshold">
         <option value="0">Alle erledigten &amp; gelöschten</option>
@@ -544,7 +549,11 @@ signoutSettingsBtn.addEventListener('click',()=>{auth.signOut(); settingsModal.c
 auth.onAuthStateChanged(user=>{
   if(user){
     loginView.classList.add('hidden'); appView.classList.remove('hidden');
-    ensureDefaults().then(()=>{ subscribeToCategories(); subscribeToAssignees(); subscribeToTodos(); subscribeToStats(); });
+    ensureDefaults().then(()=>{
+      registerCurrentUser();
+      subscribeToUsernames();
+      subscribeToCategories(); subscribeToAssignees(); subscribeToTodos(); subscribeToStats();
+    });
   } else {
     loginView.classList.remove('hidden'); appView.classList.add('hidden');
     [unsubTodos,unsubCat,unsubAsg,unsubStats].forEach(u=>{if(u){u();}}); 
@@ -560,6 +569,56 @@ async function ensureDefaults(){
 }
 
 // ---- Config ----
+async function registerCurrentUser(){
+  const user=auth.currentUser; if(!user) return;
+  const key=safeEmail(user.email);
+  await configRef.doc('users').set({[key]:user.email},{merge:true}).catch(()=>{});
+}
+
+function subscribeToUsernames(){
+  configRef.doc('usernames').onSnapshot(doc=>{
+    usernameMap=(doc.exists&&doc.data())||{};
+    renderUsernameFields();
+  });
+  configRef.doc('users').onSnapshot(doc=>{
+    knownUsers=(doc.exists&&doc.data())||{};
+    renderUsernameFields();
+  });
+}
+
+function renderUsernameFields(){
+  const container=$('usernameFields'); if(!container) return;
+  container.innerHTML='';
+  const emails=Object.values(knownUsers);
+  if(emails.length===0){
+    container.innerHTML='<div style="font-size:13px;color:var(--sub)">Noch keine Nutzer registriert.</div>';
+    return;
+  }
+  emails.forEach(email=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:4px;';
+    const lbl=document.createElement('span');
+    lbl.style.cssText='font-size:11px;color:var(--sub);min-width:100px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;';
+    lbl.textContent=email; lbl.title=email;
+    const inp=document.createElement('input');
+    inp.type='text'; inp.maxLength=30; inp.placeholder='Name…';
+    inp.value=usernameMap[email]||'';
+    inp.style.cssText='flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-family:Karla,sans-serif;font-size:14px;background:var(--card);color:var(--ink);outline:none;min-width:0;';
+    const btn=document.createElement('button');
+    btn.textContent='OK';
+    btn.style.cssText='border:none;background:var(--sage);color:white;border-radius:8px;padding:7px 12px;font-family:Karla,sans-serif;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;';
+    btn.onclick=async()=>{
+      const name=inp.value.trim();
+      const update={}; update[email]=name||firebase.firestore.FieldValue.delete();
+      await configRef.doc('usernames').set(update,{merge:true}).catch(console.error);
+      btn.textContent='✓'; setTimeout(()=>btn.textContent='OK',1500);
+    };
+    inp.addEventListener('keydown',e=>{ if(e.key==='Enter') btn.click(); });
+    row.appendChild(lbl); row.appendChild(inp); row.appendChild(btn);
+    container.appendChild(row);
+  });
+}
+
 function subscribeToCategories(){
   unsubCat=configRef.doc('categories').onSnapshot(doc=>{
     categories=(doc.exists&&doc.data().items)||[];
@@ -636,6 +695,14 @@ function getWeekKey(){
 }
 function safeEmail(email){ return (email||'').replace(/[.@]/g,'_'); }
 
+let usernameMap = {};
+let knownUsers = {};
+
+function getDisplayName(email){
+  if(!email) return '—';
+  return usernameMap[email] || email.split('@')[0];
+}
+
 function subscribeToStats(){
   const week=getWeekKey();
   unsubStats=statsRef.doc(week).onSnapshot(doc=>{
@@ -646,10 +713,10 @@ function subscribeToStats(){
     statsBar.innerHTML='';
     if(entries.length===0){ statsBar.innerHTML='<span class="stat-chip">Diese Woche: noch nichts erledigt</span>'; return; }
     entries.forEach(([key,count])=>{
-      const isMe=key===myKey;
-      const name=isMe?'Du':'Partner';
+      const email=knownUsers[key]||key;
+      const name=getDisplayName(email);
       const chip=document.createElement('div'); chip.className='stat-chip';
-      chip.innerHTML=name+': <span>'+count+' ✓</span>';
+      chip.innerHTML=escapeHtml(name)+': <span>'+count+' ✓</span>';
       statsBar.appendChild(chip);
     });
   });
@@ -942,7 +1009,7 @@ cleanupPreviewBtn.addEventListener('click', () => {
     cleanupCandidates.forEach(t => {
       const row = document.createElement('div');
       row.className = 'report-row';
-      const who = t.deleted ? 'Gelöscht' : (t.completedByEmail ? t.completedByEmail.split('@')[0] : '—');
+      const who = t.deleted ? 'Gelöscht' : getDisplayName(t.completedByEmail);
       const when = t.deleted ? formatDateTime(t.deletedAt) : formatDateTime(t.completedAt);
       row.innerHTML = '<span class="r-text">'+escapeHtml(t.text)+'</span><span class="r-who">'+escapeHtml(who)+'<br><span class="r-date">'+when+'</span></span>';
       cleanupReportBody.appendChild(row);
@@ -979,7 +1046,7 @@ viewReportBtn.addEventListener('click', async () => {
       const d = doc.data();
       const row = document.createElement('div');
       row.className = 'report-row';
-      const who = d.completedByEmail ? d.completedByEmail.split('@')[0] : '—';
+      const who = getDisplayName(d.completedByEmail);
       row.innerHTML = '<span class="r-text">'+escapeHtml(d.text)+'</span><span class="r-who">'+escapeHtml(who)+'<br><span class="r-date">'+formatDateTime(d.completedAt)+'</span></span>';
       reportBody.appendChild(row);
     });
