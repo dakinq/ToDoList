@@ -1082,19 +1082,20 @@ cleanupConfirmBtn.addEventListener('click', async () => {
 async function openReportForEmail(filterEmail, filterName){
   reportBody.innerHTML = '<div class="report-empty">Lädt...</div>';
   reportModal.classList.remove('hidden');
-  // Titel aktualisieren
   reportModal.querySelector('h2').textContent = filterName ? 'Report: '+filterName : 'Wer hat was erledigt';
   try {
-    let query = completionsRef.orderBy('completedAt','desc').limit(200);
-    if(filterEmail) query = completionsRef.where('completedByEmail','==',filterEmail).orderBy('completedAt','desc').limit(200);
-    const snap = await query.get();
+    const snap = await completionsRef.orderBy('completedAt','desc').limit(500).get();
     reportBody.innerHTML = '';
-    if (snap.empty) {
+    const docs = [];
+    snap.forEach(doc => {
+      const d = doc.data();
+      if(!filterEmail || d.completedByEmail === filterEmail) docs.push(d);
+    });
+    if (docs.length === 0) {
       reportBody.innerHTML = '<div class="report-empty">Keine Einträge gefunden.</div>';
       return;
     }
-    snap.forEach(doc => {
-      const d = doc.data();
+    docs.forEach(d => {
       const row = document.createElement('div');
       row.className = 'report-row';
       const who = filterEmail ? '' : getDisplayName(d.completedByEmail);
