@@ -150,6 +150,12 @@ body.dark .date-badge { color:var(--gold); }
 .add-row input { flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-family:'Karla',sans-serif; font-size:14px; outline:none; background:var(--card); color:var(--ink); }
 .add-row button { border:none; background:var(--sage); color:white; border-radius:8px; padding:0 14px; cursor:pointer; font-weight:700; font-size:18px; }
 .push-status { font-size:12px; color:var(--sub); }
+.report-row { display:flex; justify-content:space-between; gap:10px; padding:8px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.report-row:last-child { border-bottom:none; }
+.report-row .r-text { flex:1; min-width:0; }
+.report-row .r-who { color:var(--sage); font-weight:700; white-space:nowrap; text-align:right; }
+.report-row .r-date { color:var(--sub); font-size:11px; }
+.report-empty { text-align:center; color:var(--sub); font-family:'Fraunces',serif; font-style:italic; padding:20px; }
 .modal-photo-preview { width:100%; max-height:180px; object-fit:cover; border-radius:10px; border:1px solid var(--line); }
 </style>
 </head>
@@ -279,6 +285,23 @@ body.dark .date-badge { color:var(--gold); }
       <div class="push-status" id="pushStatusModal"></div>
     </div>
     <div class="modal-section">
+      <label>Aufräumen</label>
+      <select id="cleanupThreshold">
+        <option value="0">Alle erledigten &amp; gelöschten</option>
+        <option value="1">Älter als 1 Tag</option>
+        <option value="7">Älter als 7 Tage</option>
+        <option value="30">Älter als 30 Tage</option>
+      </select>
+      <button class="secondary" id="cleanupPreviewBtn">Report anzeigen &amp; aufräumen</button>
+    </div>
+
+    <div class="modal-section">
+      <label>Statistik</label>
+      <button class="secondary" id="viewReportBtn">Report: Wer hat was erledigt</button>
+      <button class="danger" id="resetStatsBtn">Wochen-Zähler zurücksetzen</button>
+    </div>
+
+    <div class="modal-section">
       <label>Darstellung</label>
       <button class="secondary" id="darkModeSettingsBtn">🌙 Dunkelmodus ein/aus</button>
     </div>
@@ -287,6 +310,27 @@ body.dark .date-badge { color:var(--gold); }
       <button class="danger" id="signoutSettingsBtn">Abmelden</button>
     </div>
     <button class="primary" id="closeSettingsBtn">Fertig</button>
+  </div>
+</div>
+
+<!-- Cleanup Confirm Modal -->
+<div id="cleanupModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Aufräumen</h2>
+    <div class="modal-section" id="cleanupReportBody" style="max-height:40vh;overflow-y:auto;"></div>
+    <div class="modal-btn-row">
+      <button class="secondary" id="cleanupCancelBtn">Abbrechen</button>
+      <button class="danger" id="cleanupConfirmBtn" style="flex:1">Jetzt endgültig löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div id="reportModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h2>Wer hat was erledigt</h2>
+    <div class="modal-section" id="reportBody" style="max-height:55vh;overflow-y:auto;"></div>
+    <button class="primary" id="closeReportBtn">Schließen</button>
   </div>
 </div>
 
@@ -370,6 +414,7 @@ const todosRef  = db.collection('todos');
 const configRef = db.collection('config');
 const tokensRef = db.collection('tokens');
 const statsRef  = db.collection('stats');
+const completionsRef = db.collection('completions');
 
 const DEFAULT_CATEGORIES = ['Freizeit','Einkauf','Haushalt','Sonstiges'];
 const DEFAULT_ASSIGNEES  = ['Partner A','Partner B','Beide'];
@@ -387,6 +432,10 @@ const photoAddBtn=$('photoAddBtn'), photoInput=$('photoInput'), photoPreview=$('
 const listEl=$('list'), searchInput=$('searchInput'), searchBar=$('searchBar'), searchToggleBtn=$('searchToggleBtn');
 const statsBar=$('statsBar');
 const settingsBtn=$('settingsBtn'), settingsModal=$('settingsModal'), closeSettingsBtn=$('closeSettingsBtn'), darkModeSettingsBtn=$('darkModeSettingsBtn'), signoutSettingsBtn=$('signoutSettingsBtn');
+const cleanupThreshold=$('cleanupThreshold'), cleanupPreviewBtn=$('cleanupPreviewBtn');
+const cleanupModal=$('cleanupModal'), cleanupReportBody=$('cleanupReportBody'), cleanupCancelBtn=$('cleanupCancelBtn'), cleanupConfirmBtn=$('cleanupConfirmBtn');
+const viewReportBtn=$('viewReportBtn'), resetStatsBtn=$('resetStatsBtn');
+const reportModal=$('reportModal'), reportBody=$('reportBody'), closeReportBtn=$('closeReportBtn');
 const categoryChips=$('categoryChips'), assigneeChips=$('assigneeChips');
 const newCategoryInput=$('newCategoryInput'), newAssigneeInput=$('newAssigneeInput');
 const addCategoryBtn=$('addCategoryBtn'), addAssigneeBtn=$('addAssigneeBtn');
@@ -615,18 +664,8 @@ async function recordCompletion(done){
 function subscribeToTodos(){
   if(unsubTodos) unsubTodos();
   unsubTodos=todosRef.onSnapshot(snap=>{
-    const todos=[]; const now=Date.now(); const day=86400000;
-    snap.forEach(doc=>{
-      const d=doc.data();
-      if(d.deleted&&d.deletedAt){
-        const ms=d.deletedAt.toMillis?d.deletedAt.toMillis():0;
-        if(now-ms>day){todosRef.doc(doc.id).delete().catch(()=>{});return;}
-      } else if(d.done&&d.completedAt){
-        const ms=d.completedAt.toMillis?d.completedAt.toMillis():0;
-        if(now-ms>day){todosRef.doc(doc.id).delete().catch(()=>{});return;}
-      }
-      todos.push({id:doc.id,...d});
-    });
+    const todos=[];
+    snap.forEach(doc=>{ todos.push({id:doc.id,...doc.data()}); });
     currentTodos=todos; render(todos);
   });
 }
@@ -822,8 +861,18 @@ async function toggleTodo(id,done){
       completedByEmail:done?(auth.currentUser?auth.currentUser.email:null):null,
       notifiedCompletion:done?false:true
     });
-    if(done) await recordCompletion(true);
-    else await recordCompletion(false);
+    if(done){
+      await recordCompletion(true);
+      await completionsRef.add({
+        text:todo.text,
+        category:todo.category||null,
+        assignee:todo.assignee||null,
+        completedByEmail:auth.currentUser?auth.currentUser.email:null,
+        completedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await recordCompletion(false);
+    }
     if(done&&todo.recurring&&todo.recurring!==''){
       const nd=nextDue(todo.dueDate,todo.recurring);
       await todosRef.add({
@@ -844,6 +893,101 @@ async function deleteTodo(id){
 async function restoreTodo(id){
   try{ await todosRef.doc(id).update({deleted:false,deletedAt:null}); }catch(e){console.error(e);}
 }
+
+// ---- Aufräumen (manuell) ----
+let cleanupCandidates = [];
+
+function formatDateTime(ts){
+  if(!ts) return '';
+  const ms = ts.toMillis ? ts.toMillis() : ts;
+  return new Date(ms).toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'2-digit'}) + ' ' + new Date(ms).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+cleanupPreviewBtn.addEventListener('click', () => {
+  const days = parseInt(cleanupThreshold.value);
+  const cutoff = Date.now() - days * 86400000;
+
+  cleanupCandidates = currentTodos.filter(t => {
+    if (t.deleted && t.deletedAt) {
+      const ms = t.deletedAt.toMillis ? t.deletedAt.toMillis() : 0;
+      return ms <= cutoff;
+    }
+    if (t.done && t.completedAt) {
+      const ms = t.completedAt.toMillis ? t.completedAt.toMillis() : 0;
+      return ms <= cutoff;
+    }
+    return false;
+  });
+
+  cleanupReportBody.innerHTML = '';
+  if (cleanupCandidates.length === 0) {
+    cleanupReportBody.innerHTML = '<div class="report-empty">Nichts zum Aufräumen gefunden.</div>';
+  } else {
+    cleanupCandidates.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'report-row';
+      const who = t.deleted ? 'Gelöscht' : (t.completedByEmail ? t.completedByEmail.split('@')[0] : '—');
+      const when = t.deleted ? formatDateTime(t.deletedAt) : formatDateTime(t.completedAt);
+      row.innerHTML = '<span class="r-text">'+escapeHtml(t.text)+'</span><span class="r-who">'+escapeHtml(who)+'<br><span class="r-date">'+when+'</span></span>';
+      cleanupReportBody.appendChild(row);
+    });
+  }
+  cleanupModal.classList.remove('hidden');
+});
+
+cleanupCancelBtn.addEventListener('click', () => cleanupModal.classList.add('hidden'));
+
+cleanupConfirmBtn.addEventListener('click', async () => {
+  if (cleanupCandidates.length === 0) { cleanupModal.classList.add('hidden'); return; }
+  const batch = db.batch();
+  cleanupCandidates.forEach(t => batch.delete(todosRef.doc(t.id)));
+  try {
+    await batch.commit();
+  } catch (e) { console.error('Aufräumen fehlgeschlagen', e); }
+  cleanupCandidates = [];
+  cleanupModal.classList.add('hidden');
+});
+
+// ---- Report: Wer hat was erledigt ----
+viewReportBtn.addEventListener('click', async () => {
+  reportBody.innerHTML = '<div class="report-empty">Lädt...</div>';
+  reportModal.classList.remove('hidden');
+  try {
+    const snap = await completionsRef.orderBy('completedAt','desc').limit(200).get();
+    reportBody.innerHTML = '';
+    if (snap.empty) {
+      reportBody.innerHTML = '<div class="report-empty">Noch keine erledigten Einträge protokolliert.</div>';
+      return;
+    }
+    snap.forEach(doc => {
+      const d = doc.data();
+      const row = document.createElement('div');
+      row.className = 'report-row';
+      const who = d.completedByEmail ? d.completedByEmail.split('@')[0] : '—';
+      row.innerHTML = '<span class="r-text">'+escapeHtml(d.text)+'</span><span class="r-who">'+escapeHtml(who)+'<br><span class="r-date">'+formatDateTime(d.completedAt)+'</span></span>';
+      reportBody.appendChild(row);
+    });
+  } catch (e) {
+    reportBody.innerHTML = '<div class="report-empty">Fehler beim Laden.</div>';
+    console.error(e);
+  }
+});
+closeReportBtn.addEventListener('click', () => reportModal.classList.add('hidden'));
+
+// ---- Wochen-Zähler zurücksetzen ----
+resetStatsBtn.addEventListener('click', async () => {
+  if (!confirm('Wochen-Zähler wirklich zurücksetzen?')) return;
+  try {
+    const week = getWeekKey();
+    await statsRef.doc(week).delete();
+  } catch (e) { console.error('Zurücksetzen fehlgeschlagen', e); }
+});
 
 // ---- Push ----
 let messaging; try{messaging=firebase.messaging();}catch(e){messaging=null;}
