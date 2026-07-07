@@ -1021,7 +1021,16 @@ async function deleteTodo(id){
 }
 
 async function restoreTodo(id){
-  try{ await todosRef.doc(id).update({deleted:false,deletedAt:null}); }catch(e){console.error(e);}
+  try{
+    await todosRef.doc(id).update({
+      deleted:false,
+      deletedAt:null,
+      done:false,
+      completedAt:null,
+      completedByEmail:null,
+      notifiedCompletion:true
+    });
+  }catch(e){console.error(e);}
 }
 
 // ---- Aufräumen (manuell) ----
