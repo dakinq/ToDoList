@@ -741,10 +741,24 @@ function subscribeToStats(){
     renderStatsBar();
   });
 }
-async function recordCompletion(done){
-  const user=auth.currentUser; if(!user) return;
-  const week=getWeekKey(); const key=safeEmail(user.email);
-  await statsRef.doc(week).set({[key]:firebase.firestore.FieldValue.increment(done?1:-1)},{merge:true}).catch(()=>{});
+async function recordCompletion(done,targetEmail){
+  const email=targetEmail||(auth.currentUser&&auth.currentUser.email);
+  if(!email) return;
+  const week=getWeekKey(); const key=safeEmail(email);
+  const ref=statsRef.doc(week);
+  try{
+    await db.runTransaction(async(tx)=>{
+      const snap=await tx.get(ref);
+      const data=snap.exists?snap.data():{};
+      const current=data[key]||0;
+      if(done){
+        tx.set(ref,{[key]:current+1},{merge:true});
+      } else if(current>0){
+        // Zähler darf nicht negativ werden -> nur runterzählen wenn > 0
+        tx.set(ref,{[key]:current-1},{merge:true});
+      }
+    });
+  }catch(e){console.error(e);}
 }
 
 // ---- Todos ----
@@ -988,23 +1002,34 @@ async function addTodo(){
 async function toggleTodo(id,done){
   const todo=currentTodos.find(t=>t.id===id); if(!todo) return;
   try{
+    const newCompletedByEmail=done?(auth.currentUser?auth.currentUser.email:null):null;
     await todosRef.doc(id).update({
       done,
       completedAt:done?firebase.firestore.FieldValue.serverTimestamp():null,
-      completedByEmail:done?(auth.currentUser?auth.currentUser.email:null):null,
+      completedByEmail:newCompletedByEmail,
       notifiedCompletion:done?false:true
     });
     if(done){
-      await recordCompletion(true);
-      await completionsRef.add({
+      // Zähler beim (Wieder-)Abschließen erhöhen
+      await recordCompletion(true,newCompletedByEmail);
+      const reportData={
         text:todo.text,
         category:todo.category||null,
         assignee:todo.assignee||null,
-        completedByEmail:auth.currentUser?auth.currentUser.email:null,
+        completedByEmail:newCompletedByEmail,
         completedAt:firebase.firestore.FieldValue.serverTimestamp()
-      });
+      };
+      if(todo.completionDocId){
+        // Bereits vorhandenen Report-Eintrag aktualisieren statt Duplikat anzulegen
+        await completionsRef.doc(todo.completionDocId).set(reportData,{merge:true}).catch(()=>{});
+      } else {
+        const docRef=await completionsRef.add(reportData);
+        await todosRef.doc(id).update({completionDocId:docRef.id});
+      }
     } else {
-      await recordCompletion(false);
+      // Zähler bei der Person abziehen, die den Task ursprünglich erledigt hatte
+      // (nicht bei der Person, die ihn gerade wieder öffnet), und nie unter 0
+      await recordCompletion(false,todo.completedByEmail);
     }
     if(done&&todo.recurring&&todo.recurring!==''){
       const nd=nextDue(todo.dueDate,todo.recurring);
