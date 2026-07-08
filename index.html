@@ -99,21 +99,26 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 /* Long-Press Feedback */
 .item::after {
   content:'';
-  position:absolute; left:0; bottom:0; height:3px; width:0%;
+  position:absolute; left:0; bottom:0; height:4px; width:0%;
   background:var(--sage); border-radius:0 3px 3px 0;
   pointer-events:none; opacity:0;
+}
+.item.long-pressing {
+  transform:scale(0.97);
+  box-shadow:0 0 0 2px var(--sage);
+  transition:transform .08s ease, box-shadow .08s ease;
 }
 .item.long-pressing::after {
   opacity:1; width:100%;
   transition:width .6s linear, opacity .1s ease;
 }
 .item.long-pressed {
-  animation:longPressPop .28s ease;
+  animation:longPressPop .35s ease;
 }
 @keyframes longPressPop {
-  0%   { transform:scale(1); }
-  40%  { transform:scale(0.96); background-color:var(--input-bg); }
-  100% { transform:scale(1); }
+  0%   { transform:scale(0.97); box-shadow:0 0 0 2px var(--sage); }
+  50%  { transform:scale(1.02); box-shadow:0 0 0 4px var(--sage); background-color:var(--input-bg); }
+  100% { transform:scale(1); box-shadow:0 0 0 0 rgba(0,0,0,0); }
 }
 @keyframes rise { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 .item.prio-1 { background:#FDE8E5; border-color:#D4776B; }
@@ -962,7 +967,7 @@ function addGestures(wrapper,content,todoId){
   function firePress(){
     wrapper.classList.remove('long-pressing');
     wrapper.classList.add('long-pressed');
-    setTimeout(()=>wrapper.classList.remove('long-pressed'),300);
+    setTimeout(()=>wrapper.classList.remove('long-pressed'),350);
     openEditModal(todoId);
   }
 
