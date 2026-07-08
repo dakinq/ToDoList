@@ -66,7 +66,18 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .field-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sage); padding-left:2px; }
 .field-group select, .field-group input[type="date"] { border:1px solid var(--line); border-radius:8px; padding:8px 8px; font-family:'Karla',sans-serif; font-size:13px; outline:none; background:var(--input-bg); color:var(--ink); width:100%; height:38px; box-sizing:border-box; }
 .field-group select { -webkit-appearance:none; appearance:none; }
-.field-group input[type="date"] { -webkit-appearance:auto; appearance:auto; }
+.field-group input[type="date"] { -webkit-appearance:none; appearance:none; }
+.date-field-wrap { position:relative; }
+.date-field-wrap .date-placeholder {
+  position:absolute; left:9px; top:0; height:38px; display:flex; align-items:center;
+  font-family:'Karla',sans-serif; font-size:13px; color:var(--sub); pointer-events:none;
+}
+.date-field-wrap input[type="date"]::-webkit-datetime-edit,
+.date-field-wrap input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color:var(--ink);
+}
+.date-field-wrap.is-empty input[type="date"] { color:transparent; }
+.date-field-wrap.is-empty input[type="date"]::-webkit-datetime-edit { opacity:0; }
 .field-group select:focus, .field-group input[type="date"]:focus { border-color:var(--sage); }
 .more-opts-btn { border:none; background:none; color:var(--sage); font-size:13px; font-weight:700; cursor:pointer; font-family:'Karla',sans-serif; text-align:left; padding:2px 0; }
 .extra-opts { display:flex; flex-direction:column; gap:8px; }
@@ -262,7 +273,10 @@ body.dark .date-badge { color:var(--gold); }
         </div>
         <div class="field-group">
           <span class="field-label">Fällig am</span>
-          <input id="dueInput" type="date">
+          <div class="date-field-wrap is-empty" id="dueInputWrap">
+            <input id="dueInput" type="date">
+            <span class="date-placeholder">Datum wählen</span>
+          </div>
         </div>
       </div>
       <button class="more-opts-btn" id="moreOptsBtn">⊕ Weitere Optionen</button>
@@ -409,7 +423,10 @@ body.dark .date-badge { color:var(--gold); }
     </div>
     <div class="modal-section">
       <label>Fällig am</label>
-      <input id="editDueInput" type="date">
+      <div class="date-field-wrap is-empty" id="editDueInputWrap">
+        <input id="editDueInput" type="date">
+        <span class="date-placeholder">Datum wählen</span>
+      </div>
     </div>
     <div class="modal-section">
       <label>Wiederholen</label>
@@ -470,6 +487,18 @@ const emailInput=$('emailInput'), passwordInput=$('passwordInput'), rememberMe=$
 const loginBtn=$('loginBtn'), loginError=$('loginError');
 const textInput=$('textInput'), categoryInput=$('categoryInput'), assigneeInput=$('assigneeInput');
 const priorityInput=$('priorityInput'), dueInput=$('dueInput'), notesInput=$('notesInput');
+
+// ---- Datum-Platzhalter sync (zeigt "Datum wählen" solange kein Wert gesetzt ist) ----
+function syncDatePlaceholder(input){
+  const wrap=input.closest('.date-field-wrap');
+  if(!wrap) return;
+  wrap.classList.toggle('is-empty', !input.value);
+}
+document.querySelectorAll('.date-field-wrap input[type="date"]').forEach(input=>{
+  syncDatePlaceholder(input);
+  input.addEventListener('input',()=>syncDatePlaceholder(input));
+  input.addEventListener('change',()=>syncDatePlaceholder(input));
+});
 const recurringInput=$('recurringInput'), addBtn=$('addBtn');
 const moreOptsBtn=$('moreOptsBtn'), extraOpts=$('extraOpts');
 const photoAddBtn=$('photoAddBtn'), photoInput=$('photoInput'), photoPreview=$('photoPreview');
@@ -996,6 +1025,7 @@ function openEditModal(todoId){
   editTextInput.value=todo.text||'';
   editNotesInput.value=todo.notes||'';
   editDueInput.value=todo.dueDate||'';
+  syncDatePlaceholder(editDueInput);
   editPriorityInput.value=todo.priority||'';
   editRecurringInput.value=todo.recurring||'';
   renderSelect(editCategoryInput,categories,todo.category);
@@ -1036,6 +1066,7 @@ async function addTodo(){
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
   };
   textInput.value=''; dueInput.value=''; priorityInput.value='';
+  syncDatePlaceholder(dueInput);
   notesInput.value=''; recurringInput.value='';
   newPhotoBase64=null; photoPreview.src=''; photoPreview.classList.add('hidden');
   photoAddBtn.textContent='📷 Foto wählen';
