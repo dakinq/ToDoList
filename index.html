@@ -95,6 +95,26 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .list { display:flex; flex-direction:column; gap:10px; }
 
 .item { position:relative; border-radius:12px; border:1px solid var(--line); overflow:hidden; background:var(--card); animation:rise .25s ease; }
+
+/* Long-Press Feedback */
+.item::after {
+  content:'';
+  position:absolute; left:0; bottom:0; height:3px; width:0%;
+  background:var(--sage); border-radius:0 3px 3px 0;
+  pointer-events:none; opacity:0;
+}
+.item.long-pressing::after {
+  opacity:1; width:100%;
+  transition:width .6s linear, opacity .1s ease;
+}
+.item.long-pressed {
+  animation:longPressPop .28s ease;
+}
+@keyframes longPressPop {
+  0%   { transform:scale(1); }
+  40%  { transform:scale(0.96); background-color:var(--input-bg); }
+  100% { transform:scale(1); }
+}
 @keyframes rise { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 .item.prio-1 { background:#FDE8E5; border-color:#D4776B; }
 .item.prio-2 { background:#FEF8E6; border-color:#C9A24B; }
@@ -932,22 +952,37 @@ function render(todos){
 function addGestures(wrapper,content,todoId){
   let longTimer=null, moved=false, sx=0, sy=0;
 
+  function startPress(){
+    wrapper.classList.add('long-pressing');
+  }
+  function cancelPress(){
+    clearTimeout(longTimer);
+    wrapper.classList.remove('long-pressing');
+  }
+  function firePress(){
+    wrapper.classList.remove('long-pressing');
+    wrapper.classList.add('long-pressed');
+    setTimeout(()=>wrapper.classList.remove('long-pressed'),300);
+    openEditModal(todoId);
+  }
+
   wrapper.addEventListener('touchstart',e=>{
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved=false;
-    longTimer=setTimeout(()=>{ if(!moved) openEditModal(todoId); },600);
+    startPress();
+    longTimer=setTimeout(()=>{ if(!moved) firePress(); },600);
   },{passive:true});
 
   wrapper.addEventListener('touchmove',e=>{
     const mx=Math.abs(e.touches[0].clientX-sx), my=Math.abs(e.touches[0].clientY-sy);
-    if(mx>10||my>10){ moved=true; clearTimeout(longTimer); }
+    if(mx>10||my>10){ moved=true; cancelPress(); }
   },{passive:true});
 
-  wrapper.addEventListener('touchend',()=>clearTimeout(longTimer));
+  wrapper.addEventListener('touchend',cancelPress);
 
   let mTimer=null;
-  wrapper.addEventListener('mousedown',()=>{ mTimer=setTimeout(()=>openEditModal(todoId),600); });
-  wrapper.addEventListener('mouseup',()=>clearTimeout(mTimer));
-  wrapper.addEventListener('mouseleave',()=>clearTimeout(mTimer));
+  wrapper.addEventListener('mousedown',()=>{ startPress(); mTimer=setTimeout(firePress,600); });
+  wrapper.addEventListener('mouseup',()=>{ clearTimeout(mTimer); wrapper.classList.remove('long-pressing'); });
+  wrapper.addEventListener('mouseleave',()=>{ clearTimeout(mTimer); wrapper.classList.remove('long-pressing'); });
 }
 
 function openEditModal(todoId){
