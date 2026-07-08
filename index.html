@@ -64,7 +64,9 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .field-row { display:flex; gap:8px; }
 .field-group { display:flex; flex-direction:column; gap:3px; flex:1; }
 .field-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sage); padding-left:2px; }
-.field-group select, .field-group input[type="date"] { border:1px solid var(--line); border-radius:8px; padding:8px 8px; font-family:'Karla',sans-serif; font-size:13px; outline:none; background:var(--input-bg); color:var(--ink); width:100%; height:38px; box-sizing:border-box; -webkit-appearance:none; appearance:none; }
+.field-group select, .field-group input[type="date"] { border:1px solid var(--line); border-radius:8px; padding:8px 8px; font-family:'Karla',sans-serif; font-size:13px; outline:none; background:var(--input-bg); color:var(--ink); width:100%; height:38px; box-sizing:border-box; }
+.field-group select { -webkit-appearance:none; appearance:none; }
+.field-group input[type="date"] { -webkit-appearance:auto; appearance:auto; }
 .field-group select:focus, .field-group input[type="date"]:focus { border-color:var(--sage); }
 .more-opts-btn { border:none; background:none; color:var(--sage); font-size:13px; font-weight:700; cursor:pointer; font-family:'Karla',sans-serif; text-align:left; padding:2px 0; }
 .extra-opts { display:flex; flex-direction:column; gap:8px; }
