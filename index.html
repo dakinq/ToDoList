@@ -69,9 +69,11 @@ h1 { font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0; fo
 .field-group input[type="date"] { -webkit-appearance:none; appearance:none; }
 .date-field-wrap { position:relative; }
 .date-field-wrap .date-placeholder {
-  position:absolute; left:9px; top:0; height:38px; display:flex; align-items:center;
+  position:absolute; left:9px; top:0; height:38px; align-items:center;
   font-family:'Karla',sans-serif; font-size:13px; color:var(--sub); pointer-events:none;
+  display:none;
 }
+.date-field-wrap.is-empty .date-placeholder { display:flex; }
 .date-field-wrap input[type="date"]::-webkit-datetime-edit,
 .date-field-wrap input[type="date"]::-webkit-datetime-edit-fields-wrapper {
   color:var(--ink);
