@@ -1104,6 +1104,9 @@ async function toggleTodo(id,done){
       // Zähler bei der Person abziehen, die den Task ursprünglich erledigt hatte
       // (nicht bei der Person, die ihn gerade wieder öffnet), und nie unter 0
       await recordCompletion(false,todo.completedByEmail);
+      // Report-Eintrag entfernen, da der Task nicht mehr als erledigt gilt.
+      // Sonst bleibt der alte Eintrag stehen, bis der Task erneut abgeschlossen wird.
+      await completionsRef.doc(id).delete().catch(()=>{});
     }
     if(done&&todo.recurring&&todo.recurring!==''){
       const nd=nextDue(todo.dueDate,todo.recurring);
@@ -1123,6 +1126,7 @@ async function deleteTodo(id){
 }
 
 async function restoreTodo(id){
+  const todo=currentTodos.find(t=>t.id===id);
   try{
     await todosRef.doc(id).update({
       deleted:false,
@@ -1132,6 +1136,12 @@ async function restoreTodo(id){
       completedByEmail:null,
       notifiedCompletion:true
     });
+    if(todo && todo.done){
+      // War der Task erledigt, als er gelöscht wurde: Zähler zurücknehmen
+      // und Report-Eintrag entfernen, da er jetzt wieder offen ist.
+      await recordCompletion(false,todo.completedByEmail);
+      await completionsRef.doc(id).delete().catch(()=>{});
+    }
   }catch(e){console.error(e);}
 }
 
