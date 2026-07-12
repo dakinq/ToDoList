@@ -1378,8 +1378,9 @@ async function registerPush(){
   debugLog('Notification.permission aktuell: ' + Notification.permission);
   try{
     debugLog('Schritt 1: Service Worker registrieren...');
-    const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    debugLog('SW registriert – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'noch nicht aktiv'), 'success');
+    await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    const reg=await navigator.serviceWorker.ready;
+    debugLog('SW registriert & aktiv – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'unbekannt'), 'success');
 
     debugLog('Schritt 2: Permission anfragen...');
     const perm=await Notification.requestPermission();
