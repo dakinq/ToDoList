@@ -1307,6 +1307,7 @@ function setPushStatus(t, active=false){
 }
 async function registerPush(){
   if(!messaging){setPushStatus('Push nicht unterstützt.');return;}
+  if(typeof Notification==='undefined'){setPushStatus('Benachrichtigungen werden in diesem Browser nicht unterstützt.');return;}
   try{
     const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
     const perm=await Notification.requestPermission();
