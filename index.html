@@ -1352,18 +1352,65 @@ function debugLog(msg, type='info'){
   debugLogContent.appendChild(line);
   debugLogPanel.scrollTop = debugLogPanel.scrollHeight;
 }
+let currentPushToken = null;
+
 function setPushStatus(t, active=false){
   if(active){
     enablePushBtn.classList.add('push-active');
-    enablePushBtn.textContent='Push aktiv';
-    enablePushBtn.disabled=true;
+    enablePushBtn.textContent='Push deaktivieren';
+    enablePushBtn.disabled=false;
   } else {
     enablePushBtn.classList.remove('push-active');
     enablePushBtn.textContent='Push-Benachrichtigungen aktivieren';
     enablePushBtn.disabled=false;
   }
 }
+
+function waitForSWActivated(reg){
+  return new Promise(resolve => {
+    if(reg.active && reg.active.state === 'activated'){ resolve(reg); return; }
+    const sw = reg.installing || reg.waiting || reg.active;
+    if(!sw){ resolve(reg); return; }
+    sw.addEventListener('statechange', function handler(){
+      if(sw.state === 'activated'){
+        sw.removeEventListener('statechange', handler);
+        resolve(reg);
+      }
+    });
+    // Fallback nach 3s
+    setTimeout(() => resolve(reg), 3000);
+  });
+}
+
+async function unregisterPush(){
+  debugLog('unregisterPush() gestartet');
+  enablePushBtn.disabled = true;
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const token = await messaging.getToken({vapidKey:VAPID_KEY, serviceWorkerRegistration:reg});
+    if(token){
+      debugLog('Token aus Firestore löschen...');
+      await tokensRef.doc(token).delete();
+      debugLog('Token gelöscht', 'success');
+    }
+    await messaging.deleteToken();
+    debugLog('FCM Token deregistriert', 'success');
+    currentPushToken = null;
+    setPushStatus('', false);
+    debugLog('Push deaktiviert ✓', 'success');
+  } catch(e){
+    debugLog('FEHLER beim Deaktivieren: [' + e.name + '] ' + e.message, 'error');
+    enablePushBtn.disabled = false;
+  }
+}
+
 async function registerPush(){
+  // Wenn bereits aktiv → deaktivieren
+  if(currentPushToken){
+    await unregisterPush();
+    return;
+  }
+
   debugLog('registerPush() gestartet');
   if(!messaging){
     debugLog('Firebase Messaging nicht verfügbar (messaging=null)', 'error');
@@ -1379,8 +1426,10 @@ async function registerPush(){
   try{
     debugLog('Schritt 1: Service Worker registrieren...');
     await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    const reg=await navigator.serviceWorker.ready;
-    debugLog('SW registriert & aktiv – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'unbekannt'), 'success');
+    const regRaw = await navigator.serviceWorker.ready;
+    debugLog('SW ready – State: ' + (regRaw.active?.state ?? 'unbekannt') + ' – warte auf activated...');
+    const reg = await waitForSWActivated(regRaw);
+    debugLog('SW aktiviert – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'unbekannt'), 'success');
 
     debugLog('Schritt 2: Permission anfragen...');
     const perm=await Notification.requestPermission();
@@ -1399,8 +1448,9 @@ async function registerPush(){
       const userEmail = auth.currentUser?.email || null;
       debugLog('Aktueller User: ' + (userEmail || 'nicht eingeloggt'));
       await tokensRef.doc(token).set({token, email: userEmail, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      currentPushToken = token;
       debugLog('Token gespeichert – Push aktiv!', 'success');
-      setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
+      setPushStatus('', true);
     } else {
       debugLog('Kein Token – App evtl. nicht als PWA installiert oder SW blockiert', 'warn');
       setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
@@ -1411,13 +1461,13 @@ async function registerPush(){
     setPushStatus('Fehler [' + e.name + ']: ' + e.message);
   }
 }
-enablePushBtn.addEventListener('click',registerPush);
+enablePushBtn.addEventListener('click', registerPush);
 
 // Beim Laden prüfen ob Push bereits erteilt wurde -> Button sofort als aktiv anzeigen
 if(typeof Notification !== 'undefined' && Notification.permission === 'granted' && messaging){
   navigator.serviceWorker.ready.then(reg=>{
     messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg}).then(token=>{
-      if(token) setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
+      if(token){ currentPushToken = token; setPushStatus('', true); }
     }).catch(()=>{});
   }).catch(()=>{});
 }
