@@ -193,6 +193,7 @@ body.dark .date-badge { color:var(--gold); }
 .modal-btn-row { display:flex; gap:8px; }
 .modal button.primary { border:none; background:var(--clay); color:white; border-radius:8px; padding:11px; font-family:'Karla',sans-serif; font-weight:700; font-size:15px; cursor:pointer; flex:1; }
 .modal button.secondary { border:1px solid var(--line); background:var(--card); color:var(--ink); border-radius:8px; padding:11px; cursor:pointer; font-family:'Karla',sans-serif; flex:1; }
+.modal button.secondary.push-active { border-color:#4a7c59; background:#eef5f0; color:#4a7c59; font-weight:700; }
 .modal button.danger { border:none; background:#FDE8E5; color:var(--red); border-radius:8px; padding:11px; cursor:pointer; font-family:'Karla',sans-serif; font-weight:700; flex:1; }
 .chip-row { display:flex; flex-wrap:wrap; gap:6px; }
 .chip { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:4px 10px; font-size:13px; display:flex; align-items:center; gap:6px; }
@@ -1294,7 +1295,18 @@ resetStatsBtn.addEventListener('click', async () => {
 
 // ---- Push ----
 let messaging; try{messaging=firebase.messaging();}catch(e){messaging=null;}
-function setPushStatus(t){pushStatusModal.textContent=t;}
+function setPushStatus(t, active=false){
+  pushStatusModal.textContent=t;
+  if(active){
+    enablePushBtn.classList.add('push-active');
+    enablePushBtn.textContent='Push aktiv';
+    enablePushBtn.disabled=true;
+  } else {
+    enablePushBtn.classList.remove('push-active');
+    enablePushBtn.textContent='Push-Benachrichtigungen aktivieren';
+    enablePushBtn.disabled=false;
+  }
+}
 async function registerPush(){
   if(!messaging){setPushStatus('Push nicht unterstützt.');return;}
   try{
@@ -1304,11 +1316,20 @@ async function registerPush(){
     const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
     if(token){
       await tokensRef.doc(token).set({token,email:auth.currentUser?.email||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-      setPushStatus('Push-Benachrichtigungen aktiv ✓');
+      setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
     }else{ setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.'); }
   }catch(e){setPushStatus('Fehler: '+e.message);}
 }
 enablePushBtn.addEventListener('click',registerPush);
+
+// Beim Laden prüfen ob Push bereits erteilt wurde -> Button sofort als aktiv anzeigen
+if(typeof Notification !== 'undefined' && Notification.permission === 'granted' && messaging){
+  navigator.serviceWorker.ready.then(reg=>{
+    messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg}).then(token=>{
+      if(token) setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
+    }).catch(()=>{});
+  }).catch(()=>{});
+}
 if(messaging) messaging.onMessage(()=>{});
 </script>
 </body>
