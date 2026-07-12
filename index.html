@@ -337,7 +337,6 @@ body.dark .date-badge { color:var(--gold); }
     <div class="modal-section">
       <label>Erinnerungen</label>
       <button class="secondary" id="enablePushBtn">Push-Benachrichtigungen aktivieren</button>
-      <div class="push-status" id="pushStatusModal"></div>
     </div>
     <div class="modal-section">
       <label>Namen zuweisen</label>
@@ -515,7 +514,7 @@ const reportModal=$('reportModal'), reportBody=$('reportBody'), closeReportBtn=$
 const categoryChips=$('categoryChips'), assigneeChips=$('assigneeChips');
 const newCategoryInput=$('newCategoryInput'), newAssigneeInput=$('newAssigneeInput');
 const addCategoryBtn=$('addCategoryBtn'), addAssigneeBtn=$('addAssigneeBtn');
-const enablePushBtn=$('enablePushBtn'), pushStatusModal=$('pushStatusModal');
+const enablePushBtn=$('enablePushBtn');
 const editModal=$('editModal'), editTextInput=$('editTextInput'), editNotesInput=$('editNotesInput');
 const editCategoryInput=$('editCategoryInput'), editAssigneeInput=$('editAssigneeInput');
 const editPriorityInput=$('editPriorityInput'), editDueInput=$('editDueInput');
@@ -1296,7 +1295,6 @@ resetStatsBtn.addEventListener('click', async () => {
 // ---- Push ----
 let messaging; try{messaging=firebase.messaging();}catch(e){messaging=null;}
 function setPushStatus(t, active=false){
-  pushStatusModal.textContent=t;
   if(active){
     enablePushBtn.classList.add('push-active');
     enablePushBtn.textContent='Push aktiv';
