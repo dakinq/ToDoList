@@ -374,6 +374,14 @@ body.modal-open { overflow:hidden; touch-action:none; }
       <label>Account</label>
       <button class="danger" id="signoutSettingsBtn">Abmelden</button>
     </div>
+    <div class="modal-section">
+      <label>Entwickler</label>
+      <button class="secondary" id="debugModeBtn">🐛 Debug-Modus aktivieren</button>
+      <div id="debugLogPanel" style="display:none; margin-top:8px; background:#1a1a1a; border-radius:10px; padding:10px; max-height:220px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6;">
+        <div style="color:#888; margin-bottom:6px; font-size:10px;">── Push Debug Log ──</div>
+        <div id="debugLogContent"></div>
+      </div>
+    </div>
     <button class="primary" id="closeSettingsBtn">Fertig</button>
   </div>
 </div>
@@ -1309,6 +1317,41 @@ resetStatsBtn.addEventListener('click', async () => {
 
 // ---- Push ----
 let messaging; try{messaging=firebase.messaging();}catch(e){messaging=null;}
+
+// ---- Debug-Modus ----
+let debugModeActive = false;
+const debugModeBtn = $('debugModeBtn');
+const debugLogPanel = $('debugLogPanel');
+const debugLogContent = $('debugLogContent');
+
+debugModeBtn.addEventListener('click', () => {
+  debugModeActive = !debugModeActive;
+  if(debugModeActive){
+    debugModeBtn.textContent = '🐛 Debug-Modus aktiv (tippen zum Deaktivieren)';
+    debugModeBtn.style.borderColor = '#f59e0b';
+    debugModeBtn.style.color = '#f59e0b';
+    debugLogPanel.style.display = 'block';
+    debugLog('Debug-Modus aktiviert', 'info');
+  } else {
+    debugModeBtn.textContent = '🐛 Debug-Modus aktivieren';
+    debugModeBtn.style.borderColor = '';
+    debugModeBtn.style.color = '';
+    debugLogPanel.style.display = 'none';
+    debugLogContent.innerHTML = '';
+  }
+});
+
+function debugLog(msg, type='info'){
+  if(!debugModeActive) return;
+  const time = new Date().toLocaleTimeString('de-DE');
+  const color = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80' : type === 'warn' ? '#fbbf24' : '#a3a3a3';
+  const prefix = type === 'error' ? '✗' : type === 'success' ? '✓' : type === 'warn' ? '⚠' : '→';
+  const line = document.createElement('div');
+  line.style.cssText = `color:${color}; margin-bottom:3px; word-break:break-all;`;
+  line.textContent = `[${time}] ${prefix} ${msg}`;
+  debugLogContent.appendChild(line);
+  debugLogPanel.scrollTop = debugLogPanel.scrollHeight;
+}
 function setPushStatus(t, active=false){
   if(active){
     enablePushBtn.classList.add('push-active');
@@ -1321,18 +1364,51 @@ function setPushStatus(t, active=false){
   }
 }
 async function registerPush(){
-  if(!messaging){setPushStatus('Push nicht unterstützt.');return;}
-  if(typeof Notification==='undefined'){setPushStatus('Benachrichtigungen werden in diesem Browser nicht unterstützt.');return;}
+  debugLog('registerPush() gestartet');
+  if(!messaging){
+    debugLog('Firebase Messaging nicht verfügbar (messaging=null)', 'error');
+    setPushStatus('Push nicht unterstützt.');
+    return;
+  }
+  if(typeof Notification==='undefined'){
+    debugLog('Notification API nicht verfügbar in diesem Browser', 'error');
+    setPushStatus('Benachrichtigungen werden in diesem Browser nicht unterstützt.');
+    return;
+  }
+  debugLog('Notification.permission aktuell: ' + Notification.permission);
   try{
+    debugLog('Schritt 1: Service Worker registrieren...');
     const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    debugLog('SW registriert – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'noch nicht aktiv'), 'success');
+
+    debugLog('Schritt 2: Permission anfragen...');
     const perm=await Notification.requestPermission();
-    if(perm!=='granted'){setPushStatus('Benachrichtigungen nicht erlaubt.');return;}
+    debugLog('Permission Ergebnis: ' + perm, perm==='granted' ? 'success' : 'warn');
+    if(perm!=='granted'){
+      setPushStatus('Benachrichtigungen nicht erlaubt.');
+      return;
+    }
+
+    debugLog('Schritt 3: FCM Token anfordern...');
     const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+    debugLog('Token: ' + (token ? token.substring(0,20)+'...' : 'NULL / leer'), token ? 'success' : 'warn');
+
     if(token){
-      await tokensRef.doc(token).set({token,email:auth.currentUser?.email||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      debugLog('Schritt 4: Token in Firestore speichern...');
+      const userEmail = auth.currentUser?.email || null;
+      debugLog('Aktueller User: ' + (userEmail || 'nicht eingeloggt'));
+      await tokensRef.doc(token).set({token, email: userEmail, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      debugLog('Token gespeichert – Push aktiv!', 'success');
       setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
-    }else{ setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.'); }
-  }catch(e){setPushStatus('Fehler: '+e.message);}
+    } else {
+      debugLog('Kein Token – App evtl. nicht als PWA installiert oder SW blockiert', 'warn');
+      setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
+    }
+  } catch(e) {
+    debugLog('FEHLER: [' + e.name + '] ' + e.message, 'error');
+    debugLog('Stack: ' + (e.stack || 'nicht verfügbar'), 'error');
+    setPushStatus('Fehler [' + e.name + ']: ' + e.message);
+  }
 }
 enablePushBtn.addEventListener('click',registerPush);
 
