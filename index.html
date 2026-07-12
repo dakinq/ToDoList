@@ -183,8 +183,9 @@ body.dark .date-badge { color:var(--gold); }
 .hidden { display:none !important; }
 
 /* Modals */
-.modal-overlay { position:fixed; inset:0; background:rgba(46,42,38,0.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:10; }
-.modal { background:var(--paper); border-radius:14px; padding:22px; width:100%; max-width:420px; max-height:88vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+.modal-overlay { position:fixed; inset:0; background:rgba(46,42,38,0.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:10; overflow:hidden; }
+.modal { background:var(--paper); border-radius:14px; padding:22px; width:100%; max-width:420px; max-height:88vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; overscroll-behavior:contain; }
+body.modal-open { overflow:hidden; touch-action:none; }
 .modal h2 { font-family:'Fraunces',serif; font-style:italic; margin:0; font-size:22px; }
 .modal-section { display:flex; flex-direction:column; gap:6px; }
 .modal-section label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sage); }
@@ -731,8 +732,8 @@ addAssigneeBtn.addEventListener('click',async()=>{
 async function removeCategory(v){ await configRef.doc('categories').set({items:categories.filter(c=>c!==v)}); }
 async function removeAssignee(v){ await configRef.doc('assignees').set({items:assignees.filter(a=>a!==v)}); }
 
-settingsBtn.addEventListener('click',()=>settingsModal.classList.remove('hidden'));
-closeSettingsBtn.addEventListener('click',()=>settingsModal.classList.add('hidden'));
+settingsBtn.addEventListener('click',()=>{settingsModal.classList.remove('hidden');document.body.classList.add('modal-open');});
+closeSettingsBtn.addEventListener('click',()=>{settingsModal.classList.add('hidden');document.body.classList.remove('modal-open');});
 
 // ---- Filter chips ----
 // Search toggle
@@ -1035,9 +1036,9 @@ function openEditModal(todoId){
   editPhotoBase64=todo.photo||null;
   if(editPhotoBase64){ editPhotoPreview.src=editPhotoBase64; editPhotoPreview.classList.remove('hidden'); }
   else { editPhotoPreview.src=''; editPhotoPreview.classList.add('hidden'); }
-  editModal.classList.remove('hidden');
+  editModal.classList.remove('hidden');document.body.classList.add('modal-open');
 }
-cancelEditBtn.addEventListener('click',()=>{editModal.classList.add('hidden');editingTodoId=null;});
+cancelEditBtn.addEventListener('click',()=>{editModal.classList.add('hidden');document.body.classList.remove('modal-open');editingTodoId=null;});
 saveEditBtn.addEventListener('click',async()=>{
   const text=editTextInput.value.trim(); if(!text||!editingTodoId) return;
   try{
@@ -1048,7 +1049,7 @@ saveEditBtn.addEventListener('click',async()=>{
       recurring:editRecurringInput.value||null, notified:false,
       photo:editPhotoBase64||null
     });
-    editModal.classList.add('hidden'); editingTodoId=null;
+    editModal.classList.add('hidden');document.body.classList.remove('modal-open'); editingTodoId=null;
   }catch(e){console.error(e);}
 });
 
@@ -1189,26 +1190,26 @@ cleanupPreviewBtn.addEventListener('click', () => {
       cleanupReportBody.appendChild(row);
     });
   }
-  cleanupModal.classList.remove('hidden');
+  cleanupModal.classList.remove('hidden');document.body.classList.add('modal-open');
 });
 
-cleanupCancelBtn.addEventListener('click', () => cleanupModal.classList.add('hidden'));
+cleanupCancelBtn.addEventListener('click', () => {cleanupModal.classList.add('hidden');document.body.classList.remove('modal-open');});
 
 cleanupConfirmBtn.addEventListener('click', async () => {
-  if (cleanupCandidates.length === 0) { cleanupModal.classList.add('hidden'); return; }
+  if (cleanupCandidates.length === 0) { cleanupModal.classList.add('hidden');document.body.classList.remove('modal-open'); return; }
   const batch = db.batch();
   cleanupCandidates.forEach(t => batch.delete(todosRef.doc(t.id)));
   try {
     await batch.commit();
   } catch (e) { console.error('Aufräumen fehlgeschlagen', e); }
   cleanupCandidates = [];
-  cleanupModal.classList.add('hidden');
+  cleanupModal.classList.add('hidden');document.body.classList.remove('modal-open');
 });
 
 // ---- Report: Wer hat was erledigt ----
 async function openReportForEmail(filterEmail, filterName){
   reportBody.innerHTML = '<div class="report-empty">Lädt...</div>';
-  reportModal.classList.remove('hidden');
+  reportModal.classList.remove('hidden');document.body.classList.add('modal-open');
   reportModal.querySelector('h2').textContent = filterName ? 'Report: '+filterName : 'Wer hat was erledigt';
   try {
     const snap = await completionsRef.orderBy('completedAt','desc').limit(500).get();
@@ -1281,7 +1282,7 @@ dedupeReportBtn.addEventListener('click', async () => {
 });
 
 viewReportBtn.addEventListener('click', ()=>openReportForEmail(null, null));
-closeReportBtn.addEventListener('click', () => { reportModal.classList.add('hidden'); reportModal.querySelector('h2').textContent='Wer hat was erledigt'; });
+closeReportBtn.addEventListener('click', () => { reportModal.classList.add('hidden');document.body.classList.remove('modal-open'); reportModal.querySelector('h2').textContent='Wer hat was erledigt'; });
 
 // ---- Wochen-Zähler zurücksetzen ----
 resetStatsBtn.addEventListener('click', async () => {
