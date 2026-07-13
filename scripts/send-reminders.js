@@ -25,6 +25,20 @@ async function deleteOldCompleted() {
   else { console.log('Nichts zum endgueltigen Entfernen.'); }
 }
 
+// Alle Tokens holen, optional nach E-Mail-Liste filtern
+async function getTokens(includeEmails) {
+  const snapshot = await db.collection('tokens').get();
+  const tokens = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    if (!includeEmails || includeEmails.includes(data.email)) {
+      tokens.push(data.token);
+    }
+  });
+  return tokens;
+}
+
+// Alle Tokens holen ausser bestimmte E-Mail
 async function getTokensExcept(excludeEmail) {
   const snapshot = await db.collection('tokens').get();
   const tokens = [];
@@ -35,14 +49,29 @@ async function getTokensExcept(excludeEmail) {
   return tokens;
 }
 
-async function sendToTokens(tokens, title, body) {
-  if (tokens.length === 0) return { successCount: 0, failureCount: 0 };
+async function sendToTokens(tokens, title, body, todoId) {
+  if (tokens.length === 0) { console.log('Keine Tokens zum Senden.'); return { successCount: 0, failureCount: 0 }; }
   console.log(`Sende an ${tokens.length} Token(s)...`);
-  const response = await messaging.sendEachForMulticast({
+
+  const message = {
     tokens,
     notification: { title, body },
-    webpush: { notification: { title, body, icon: 'https://dakinq.github.io/ToDoList/icon-192.png' } }
-  });
+    webpush: {
+      notification: {
+        title,
+        body,
+        icon: 'https://dakinq.github.io/ToDoList/icon-192.png',
+      },
+      fcm_options: {
+        // Beim Tippen auf die Notification App öffnen und direkt zur Task
+        link: todoId
+          ? `https://dakinq.github.io/ToDoList/?editId=${todoId}`
+          : 'https://dakinq.github.io/ToDoList/'
+      }
+    }
+  };
+
+  const response = await messaging.sendEachForMulticast(message);
   response.responses.forEach((res, idx) => {
     if (res.success) {
       console.log(`  Token[${idx}] erfolgreich gesendet`);
@@ -51,67 +80,85 @@ async function sendToTokens(tokens, title, body) {
       const errMsg = res.error?.message || 'keine Message';
       console.error(`  Token[${idx}] Fehler-Code: ${errCode}`);
       console.error(`  Token[${idx}] Fehler-Message: ${errMsg}`);
-      const invalidCodes = ['messaging/registration-token-not-registered','messaging/invalid-registration-token','messaging/invalid-argument'];
+      const invalidCodes = [
+        'messaging/registration-token-not-registered',
+        'messaging/invalid-registration-token',
+        'messaging/invalid-argument',
+      ];
       if (invalidCodes.includes(errCode)) {
         console.log(`  Token[${idx}] wird aus Firestore geloescht`);
-        db.collection('tokens').doc(tokens[idx]).delete().catch(e => console.error(`  Loeschen fehlgeschlagen: ${e.message}`));
+        db.collection('tokens').doc(tokens[idx]).delete().catch(e => console.error(`Loeschen fehlgeschlagen: ${e.message}`));
       }
     }
   });
   return response;
 }
 
+// ---- 1. Erinnerungen fuer faellige To-dos ----
 async function sendDueReminders() {
   const today = todayDateString();
   let query = db.collection('todos').where('done', '==', false);
   if (!MANUAL_RUN) query = query.where('notified', '==', false);
   const snapshot = await query.get();
+
   const dueTodos = [];
   snapshot.forEach(doc => {
     const data = doc.data();
     if (data.dueDate && data.dueDate <= today) dueTodos.push({ id: doc.id, ...data });
   });
+
   if (dueTodos.length === 0) { console.log('Keine faelligen To-dos.'); return; }
   console.log(`${dueTodos.length} faellige To-do(s) gefunden.`);
+
   for (const todo of dueTodos) {
-    const title = todo.dueDate < today ? 'Ueberfaellig' : 'Heute faellig';
-    const body = todo.text + (todo.assignee ? ' - ' + todo.assignee : '') + (todo.priority ? ' - Prio ' + todo.priority : '');
-    const tokens = await getTokensExcept(null);
+    const isOverdue = todo.dueDate < today;
+    const title = isOverdue ? '\u26a0\ufe0f \u00dcberf\u00e4llig' : '\ud83d\udcc5 Heute f\u00e4llig';
+
+    // Nur an zugewiesene Person(en) senden
+    // assignee ist ein einzelner Name (kein Email) – wir senden an alle wenn kein assignee gesetzt
+    // oder an alle wenn wir keinen Email-Match machen koennen
+    const tokens = await getTokensExcept(null); // alle erhalten Faelligkeits-Erinnerung
+
+    const body = todo.text;
     try {
-      const res = await sendToTokens(tokens, title, body);
+      const res = await sendToTokens(tokens, title, body, todo.id);
       console.log(`Faelligkeits-Erinnerung "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
       if (!MANUAL_RUN) await db.collection('todos').doc(todo.id).update({ notified: true });
     } catch (e) { console.error(`Fehler bei "${todo.text}":`, e.message); }
   }
 }
 
+// ---- 2. Benachrichtigung bei neuen Eintraegen (an alle ausser Autor) ----
 async function sendCreationNotifications() {
   const snapshot = await db.collection('todos').where('notifiedCreation', '==', false).get();
   if (snapshot.empty) { console.log('Keine neuen Eintraege zu melden.'); return; }
+
   for (const doc of snapshot.docs) {
     const todo = doc.data();
     const tokens = await getTokensExcept(todo.authorEmail || null);
     const title = 'Neuer Eintrag';
-    const body = todo.text + (todo.assignee ? ' - fuer ' + todo.assignee : '');
+    const body = todo.text;
     try {
-      const res = await sendToTokens(tokens, title, body);
+      const res = await sendToTokens(tokens, title, body, doc.id);
       console.log(`Neuer Eintrag "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
     } catch (e) { console.error(`Fehler bei Neu-Benachrichtigung "${todo.text}":`, e.message); }
     await doc.ref.update({ notifiedCreation: true });
   }
 }
 
+// ---- 3. Benachrichtigung bei erledigten Eintraegen (an alle ausser wer erledigt hat) ----
 async function sendCompletionNotifications() {
   const snapshot = await db.collection('todos').where('notifiedCompletion', '==', false).get();
   if (snapshot.empty) { console.log('Keine neu erledigten Eintraege zu melden.'); return; }
+
   for (const doc of snapshot.docs) {
     const todo = doc.data();
     if (!todo.done) { await doc.ref.update({ notifiedCompletion: true }); continue; }
     const tokens = await getTokensExcept(todo.completedByEmail || null);
-    const title = 'Erledigt';
+    const title = 'Erledigt \u2713';
     const body = todo.text;
     try {
-      const res = await sendToTokens(tokens, title, body);
+      const res = await sendToTokens(tokens, title, body, doc.id);
       console.log(`Erledigt "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
     } catch (e) { console.error(`Fehler bei Erledigt-Benachrichtigung "${todo.text}":`, e.message); }
     await doc.ref.update({ notifiedCompletion: true });
