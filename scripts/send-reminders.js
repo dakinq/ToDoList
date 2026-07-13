@@ -11,9 +11,6 @@ function todayDateString() {
 }
 
 async function deleteOldCompleted() {
-  // Nach 7 Tagen automatisch entfernen. Der "wer hat was erledigt"-Report
-  // bleibt trotzdem erhalten, da er separat in der Sammlung 'completions'
-  // dauerhaft protokolliert wird.
   const cutoff = admin.firestore.Timestamp.fromMillis(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const completedSnap = await db.collection('todos')
@@ -51,12 +48,46 @@ async function getTokensExcept(excludeEmail) {
 
 async function sendToTokens(tokens, title, body) {
   if (tokens.length === 0) return { successCount: 0, failureCount: 0 };
-  const response = await messaging.sendEachForMulticast({ tokens, notification: { title, body } });
-  response.responses.forEach((res, idx) => {
-    if (!res.success && res.error && res.error.code === 'messaging/registration-token-not-registered') {
-      db.collection('tokens').doc(tokens[idx]).delete().catch(() => {});
+
+  console.log(`Sende an ${tokens.length} Token(s)...`);
+
+  const response = await messaging.sendEachForMulticast({
+    tokens,
+    notification: { title, body },
+    webpush: {
+      notification: {
+        title,
+        body,
+        icon: 'https://dakinq.github.io/ToDoList/icon-192.png'
+      }
     }
   });
+
+  response.responses.forEach((res, idx) => {
+    if (res.success) {
+      console.log(`  Token[${idx}] ✓ erfolgreich gesendet`);
+    } else {
+      // Detailliertes Logging für jeden fehlgeschlagenen Token
+      const errCode = res.error?.code || 'unbekannt';
+      const errMsg = res.error?.message || 'keine Message';
+      console.error(`  Token[${idx}] ✗ Fehler-Code: ${errCode}`);
+      console.error(`  Token[${idx}] ✗ Fehler-Message: ${errMsg}`);
+
+      // Ungültige Tokens automatisch löschen
+      const invalidCodes = [
+        'messaging/registration-token-not-registered',
+        'messaging/invalid-registration-token',
+        'messaging/invalid-argument',
+      ];
+      if (invalidCodes.includes(errCode)) {
+        console.log(`  Token[${idx}] → wird aus Firestore gelöscht`);
+        db.collection('tokens').doc(tokens[idx]).delete().catch(e => {
+          console.error(`  Token[${idx}] → Löschen fehlgeschlagen: ${e.message}`);
+        });
+      }
+    }
+  });
+
   return response;
 }
 
@@ -79,7 +110,7 @@ async function sendDueReminders() {
   for (const todo of dueTodos) {
     const title = todo.dueDate < today ? '⚠️ Überfällig' : '📅 Heute fällig';
     const body = todo.text + (todo.assignee ? ' · ' + todo.assignee : '') + (todo.priority ? ' · Prio ' + todo.priority : '');
-    const tokens = await getTokensExcept(null); // Fälligkeits-Erinnerung geht an alle
+    const tokens = await getTokensExcept(null);
     try {
       const res = await sendToTokens(tokens, title, body);
       console.log(`Fälligkeits-Erinnerung "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
@@ -90,7 +121,7 @@ async function sendDueReminders() {
   }
 }
 
-// ---- 2. Benachrichtigung bei neuen Einträgen (an den jeweils ANDEREN Partner) ----
+// ---- 2. Benachrichtigung bei neuen Einträgen ----
 async function sendCreationNotifications() {
   const snapshot = await db.collection('todos')
     .where('notifiedCreation', '==', false)
@@ -113,7 +144,7 @@ async function sendCreationNotifications() {
   }
 }
 
-// ---- 3. Benachrichtigung bei erledigten Einträgen (an den jeweils ANDEREN Partner) ----
+// ---- 3. Benachrichtigung bei erledigten Einträgen ----
 async function sendCompletionNotifications() {
   const snapshot = await db.collection('todos')
     .where('notifiedCompletion', '==', false)
