@@ -377,6 +377,7 @@ body.modal-open { overflow:hidden; touch-action:none; }
     <div class="modal-section">
       <label>Entwickler</label>
       <button class="secondary" id="debugModeBtn">🐛 Debug-Modus aktivieren</button>
+      <button class="secondary" id="testPushBtn" style="display:none; margin-top:6px;">🔔 Test-Push senden</button>
       <div id="debugLogPanel" style="display:none; margin-top:8px; background:#1a1a1a; border-radius:10px; padding:10px; max-height:220px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6;">
         <div style="color:#888; margin-bottom:6px; font-size:10px;">── Push Debug Log ──</div>
         <div id="debugLogContent"></div>
@@ -1324,21 +1325,61 @@ const debugModeBtn = $('debugModeBtn');
 const debugLogPanel = $('debugLogPanel');
 const debugLogContent = $('debugLogContent');
 
+const testPushBtn = $('testPushBtn');
+
 debugModeBtn.addEventListener('click', () => {
   debugModeActive = !debugModeActive;
   if(debugModeActive){
     debugModeBtn.textContent = '🐛 Debug-Modus aktiv (tippen zum Deaktivieren)';
     debugModeBtn.style.borderColor = '#f59e0b';
     debugModeBtn.style.color = '#f59e0b';
+    testPushBtn.style.display = 'block';
     debugLogPanel.style.display = 'block';
     debugLog('Debug-Modus aktiviert', 'info');
   } else {
     debugModeBtn.textContent = '🐛 Debug-Modus aktivieren';
     debugModeBtn.style.borderColor = '';
     debugModeBtn.style.color = '';
+    testPushBtn.style.display = 'none';
     debugLogPanel.style.display = 'none';
     debugLogContent.innerHTML = '';
   }
+});
+
+testPushBtn.addEventListener('click', async () => {
+  debugLog('Test-Push wird ausgelöst...', 'info');
+  testPushBtn.disabled = true;
+  try {
+    // Token sicher aus Firestore laden (nur für eingeloggte User zugänglich)
+    const snap = await db.collection('config').doc('debug').get();
+    if(!snap.exists || !snap.data().ghToken){
+      debugLog('Kein GitHub Token in Firestore (config/debug/ghToken)', 'error');
+      testPushBtn.disabled = false;
+      return;
+    }
+    const ghToken = snap.data().ghToken;
+    const response = await fetch(
+      'https://api.github.com/repos/dakinq/ToDoList/actions/workflows/reminders.yml/dispatches',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'token ' + ghToken,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ref: 'main' }),
+      }
+    );
+    if(response.status === 204){
+      debugLog('Workflow ausgelöst! Push kommt in ~15 Sekunden...', 'success');
+    } else {
+      const text = await response.text();
+      debugLog('GitHub Fehler ' + response.status + ': ' + text, 'error');
+    }
+  } catch(e) {
+    debugLog('Fetch-Fehler: ' + e.message, 'error');
+  }
+  testPushBtn.disabled = false;
 });
 
 function debugLog(msg, type='info'){
