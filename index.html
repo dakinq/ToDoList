@@ -374,15 +374,6 @@ body.modal-open { overflow:hidden; touch-action:none; }
       <label>Account</label>
       <button class="danger" id="signoutSettingsBtn">Abmelden</button>
     </div>
-    <div class="modal-section">
-      <label>Entwickler</label>
-      <button class="secondary" id="debugModeBtn">🐛 Debug-Modus aktivieren</button>
-      <button class="secondary" id="testPushBtn" style="display:none; margin-top:6px;">🔔 Test-Push senden</button>
-      <div id="debugLogPanel" style="display:none; margin-top:8px; background:#1a1a1a; border-radius:10px; padding:10px; max-height:220px; overflow-y:auto; font-family:monospace; font-size:11px; line-height:1.6;">
-        <div style="color:#888; margin-bottom:6px; font-size:10px;">── Push Debug Log ──</div>
-        <div id="debugLogContent"></div>
-      </div>
-    </div>
     <button class="primary" id="closeSettingsBtn">Fertig</button>
   </div>
 </div>
@@ -860,8 +851,20 @@ function subscribeToTodos(){
       todos.push({id:doc.id,...d});
     });
     currentTodos=todos; render(todos);
+    // Push-Notification Deep Link: ?editId=<todoId>
+    const urlParams=new URLSearchParams(window.location.search);
+    const editId=urlParams.get('editId');
+    if(editId){
+      const target=todos.find(t=>t.id===editId);
+      if(target){
+        openEditModal(editId);
+        // URL bereinigen ohne Seitenreload
+        window.history.replaceState({},'',window.location.pathname);
+      }
+    }
   });
 }
+
 
 function formatDate(s){
   const d=new Date(s+'T00:00:00');
@@ -1318,208 +1321,38 @@ resetStatsBtn.addEventListener('click', async () => {
 
 // ---- Push ----
 let messaging; try{messaging=firebase.messaging();}catch(e){messaging=null;}
-
-// ---- Debug-Modus ----
-let debugModeActive = false;
-const debugModeBtn = $('debugModeBtn');
-const debugLogPanel = $('debugLogPanel');
-const debugLogContent = $('debugLogContent');
-
-const testPushBtn = $('testPushBtn');
-
-debugModeBtn.addEventListener('click', () => {
-  debugModeActive = !debugModeActive;
-  if(debugModeActive){
-    debugModeBtn.textContent = '🐛 Debug-Modus aktiv (tippen zum Deaktivieren)';
-    debugModeBtn.style.borderColor = '#f59e0b';
-    debugModeBtn.style.color = '#f59e0b';
-    testPushBtn.style.display = 'block';
-    debugLogPanel.style.display = 'block';
-    debugLog('Debug-Modus aktiviert', 'info');
-  } else {
-    debugModeBtn.textContent = '🐛 Debug-Modus aktivieren';
-    debugModeBtn.style.borderColor = '';
-    debugModeBtn.style.color = '';
-    testPushBtn.style.display = 'none';
-    debugLogPanel.style.display = 'none';
-    debugLogContent.innerHTML = '';
-  }
-});
-
-testPushBtn.addEventListener('click', async () => {
-  debugLog('Test-Push wird ausgelöst...', 'info');
-  testPushBtn.disabled = true;
-  try {
-    // Token sicher aus Firestore laden (nur für eingeloggte User zugänglich)
-    const snap = await db.collection('config').doc('debug').get();
-    if(!snap.exists || !snap.data().ghToken){
-      debugLog('Kein GitHub Token in Firestore (config/debug/ghToken)', 'error');
-      testPushBtn.disabled = false;
-      return;
-    }
-    const ghToken = snap.data().ghToken;
-    const response = await fetch(
-      'https://api.github.com/repos/dakinq/ToDoList/actions/workflows/reminders.yml/dispatches',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': 'token ' + ghToken,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ref: 'main' }),
-      }
-    );
-    if(response.status === 204){
-      debugLog('Workflow ausgelöst! Push kommt in ~15 Sekunden...', 'success');
-    } else {
-      const text = await response.text();
-      debugLog('GitHub Fehler ' + response.status + ': ' + text, 'error');
-    }
-  } catch(e) {
-    debugLog('Fetch-Fehler: ' + e.message, 'error');
-  }
-  testPushBtn.disabled = false;
-});
-
-function debugLog(msg, type='info'){
-  if(!debugModeActive) return;
-  const time = new Date().toLocaleTimeString('de-DE');
-  const color = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80' : type === 'warn' ? '#fbbf24' : '#a3a3a3';
-  const prefix = type === 'error' ? '✗' : type === 'success' ? '✓' : type === 'warn' ? '⚠' : '→';
-  const line = document.createElement('div');
-  line.style.cssText = `color:${color}; margin-bottom:3px; word-break:break-all;`;
-  line.textContent = `[${time}] ${prefix} ${msg}`;
-  debugLogContent.appendChild(line);
-  debugLogPanel.scrollTop = debugLogPanel.scrollHeight;
-}
-let currentPushToken = null;
-
 function setPushStatus(t, active=false){
   if(active){
     enablePushBtn.classList.add('push-active');
-    enablePushBtn.textContent='Push deaktivieren';
-    enablePushBtn.disabled=false;
+    enablePushBtn.textContent='Push aktiv';
+    enablePushBtn.disabled=true;
   } else {
     enablePushBtn.classList.remove('push-active');
     enablePushBtn.textContent='Push-Benachrichtigungen aktivieren';
     enablePushBtn.disabled=false;
   }
 }
-
-function waitForSWActivated(reg){
-  return new Promise(resolve => {
-    if(reg.active && reg.active.state === 'activated'){ resolve(reg); return; }
-    const sw = reg.installing || reg.waiting || reg.active;
-    if(!sw){ resolve(reg); return; }
-    sw.addEventListener('statechange', function handler(){
-      if(sw.state === 'activated'){
-        sw.removeEventListener('statechange', handler);
-        resolve(reg);
-      }
-    });
-    // Fallback nach 3s
-    setTimeout(() => resolve(reg), 3000);
-  });
-}
-
-async function unregisterPush(){
-  debugLog('unregisterPush() gestartet');
-  enablePushBtn.disabled = true;
-  try{
-    const userEmail = auth.currentUser?.email || null;
-    debugLog('Suche alle Tokens für: ' + (userEmail || 'unbekannt'));
-    const snap = await tokensRef.get();
-    const batch = db.batch();
-    let count = 0;
-    snap.forEach(doc => {
-      const data = doc.data();
-      if(!data.email || data.email === userEmail){
-        batch.delete(doc.ref);
-        count++;
-      }
-    });
-    if(count > 0){
-      await batch.commit();
-      debugLog(count + ' Token(s) aus Firestore gelöscht', 'success');
-    } else {
-      debugLog('Keine Tokens in Firestore gefunden', 'warn');
-    }
-    await messaging.deleteToken();
-    debugLog('FCM Token deregistriert', 'success');
-    currentPushToken = null;
-    setPushStatus('', false);
-    debugLog('Push deaktiviert ✓', 'success');
-  } catch(e){
-    debugLog('FEHLER beim Deaktivieren: [' + e.name + '] ' + e.message, 'error');
-    enablePushBtn.disabled = false;
-  }
-}
-
 async function registerPush(){
-  // Wenn bereits aktiv → deaktivieren
-  if(currentPushToken){
-    await unregisterPush();
-    return;
-  }
-
-  debugLog('registerPush() gestartet');
-  if(!messaging){
-    debugLog('Firebase Messaging nicht verfügbar (messaging=null)', 'error');
-    setPushStatus('Push nicht unterstützt.');
-    return;
-  }
-  if(typeof Notification==='undefined'){
-    debugLog('Notification API nicht verfügbar in diesem Browser', 'error');
-    setPushStatus('Benachrichtigungen werden in diesem Browser nicht unterstützt.');
-    return;
-  }
-  debugLog('Notification.permission aktuell: ' + Notification.permission);
+  if(!messaging){setPushStatus('Push nicht unterstützt.');return;}
+  if(typeof Notification==='undefined'){setPushStatus('Benachrichtigungen werden in diesem Browser nicht unterstützt.');return;}
   try{
-    debugLog('Schritt 1: Service Worker registrieren...');
-    await navigator.serviceWorker.register('firebase-messaging-sw.js');
-    const regRaw = await navigator.serviceWorker.ready;
-    debugLog('SW ready – State: ' + (regRaw.active?.state ?? 'unbekannt') + ' – warte auf activated...');
-    const reg = await waitForSWActivated(regRaw);
-    debugLog('SW aktiviert – Scope: ' + reg.scope + ' | State: ' + (reg.active?.state ?? 'unbekannt'), 'success');
-
-    debugLog('Schritt 2: Permission anfragen...');
+    const reg=await navigator.serviceWorker.register('firebase-messaging-sw.js');
     const perm=await Notification.requestPermission();
-    debugLog('Permission Ergebnis: ' + perm, perm==='granted' ? 'success' : 'warn');
-    if(perm!=='granted'){
-      setPushStatus('Benachrichtigungen nicht erlaubt.');
-      return;
-    }
-
-    debugLog('Schritt 3: FCM Token anfordern...');
+    if(perm!=='granted'){setPushStatus('Benachrichtigungen nicht erlaubt.');return;}
     const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
-    debugLog('Token: ' + (token ? token.substring(0,20)+'...' : 'NULL / leer'), token ? 'success' : 'warn');
-
     if(token){
-      debugLog('Schritt 4: Token in Firestore speichern...');
-      const userEmail = auth.currentUser?.email || null;
-      debugLog('Aktueller User: ' + (userEmail || 'nicht eingeloggt'));
-      await tokensRef.doc(token).set({token, email: userEmail, updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
-      currentPushToken = token;
-      debugLog('Token gespeichert – Push aktiv!', 'success');
-      setPushStatus('', true);
-    } else {
-      debugLog('Kein Token – App evtl. nicht als PWA installiert oder SW blockiert', 'warn');
-      setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.');
-    }
-  } catch(e) {
-    debugLog('FEHLER: [' + e.name + '] ' + e.message, 'error');
-    debugLog('Stack: ' + (e.stack || 'nicht verfügbar'), 'error');
-    setPushStatus('Fehler [' + e.name + ']: ' + e.message);
-  }
+      await tokensRef.doc(token).set({token,email:auth.currentUser?.email||null,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
+    }else{ setPushStatus('Seite zum Home-Bildschirm hinzufügen und erneut versuchen.'); }
+  }catch(e){setPushStatus('Fehler: '+e.message);}
 }
-enablePushBtn.addEventListener('click', registerPush);
+enablePushBtn.addEventListener('click',registerPush);
 
 // Beim Laden prüfen ob Push bereits erteilt wurde -> Button sofort als aktiv anzeigen
 if(typeof Notification !== 'undefined' && Notification.permission === 'granted' && messaging){
   navigator.serviceWorker.ready.then(reg=>{
     messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg}).then(token=>{
-      if(token){ currentPushToken = token; setPushStatus('', true); }
+      if(token) setPushStatus('Push-Benachrichtigungen aktiv ✓', true);
     }).catch(()=>{});
   }).catch(()=>{});
 }
