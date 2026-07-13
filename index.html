@@ -1427,12 +1427,23 @@ async function unregisterPush(){
   debugLog('unregisterPush() gestartet');
   enablePushBtn.disabled = true;
   try{
-    const reg = await navigator.serviceWorker.ready;
-    const token = await messaging.getToken({vapidKey:VAPID_KEY, serviceWorkerRegistration:reg});
-    if(token){
-      debugLog('Token aus Firestore löschen...');
-      await tokensRef.doc(token).delete();
-      debugLog('Token gelöscht', 'success');
+    const userEmail = auth.currentUser?.email || null;
+    debugLog('Suche alle Tokens für: ' + (userEmail || 'unbekannt'));
+    const snap = await tokensRef.get();
+    const batch = db.batch();
+    let count = 0;
+    snap.forEach(doc => {
+      const data = doc.data();
+      if(!data.email || data.email === userEmail){
+        batch.delete(doc.ref);
+        count++;
+      }
+    });
+    if(count > 0){
+      await batch.commit();
+      debugLog(count + ' Token(s) aus Firestore gelöscht', 'success');
+    } else {
+      debugLog('Keine Tokens in Firestore gefunden', 'warn');
     }
     await messaging.deleteToken();
     debugLog('FCM Token deregistriert', 'success');
