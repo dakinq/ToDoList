@@ -174,7 +174,13 @@ body.dark .date-badge { color:var(--gold); }
 .del:hover { color:var(--clay); }
 
 .empty { text-align:center; padding:48px 20px; color:var(--sub); font-family:'Fraunces',serif; font-style:italic; font-size:17px; }
-.long-press-hint { text-align:center; font-size:12px; color:#bbb1a3; margin-top:10px; }
+/* detail modal */
+.detail-photo { width:100%; max-height:220px; object-fit:cover; border-radius:10px; border:1px solid var(--line); cursor:zoom-in; display:block; }
+.detail-value { font-size:15px; color:var(--ink); word-break:break-word; }
+/* fullscreen image viewer */
+#imgViewer { position:fixed; inset:0; background:#000; z-index:9999; display:flex; align-items:center; justify-content:center; touch-action:none; }
+#imgViewer img { max-width:100%; max-height:100%; object-fit:contain; transform-origin:center center; user-select:none; -webkit-user-select:none; will-change:transform; }
+#imgViewerClose { position:absolute; top:16px; right:16px; background:rgba(255,255,255,.18); border:none; color:#fff; font-size:24px; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; z-index:1; line-height:1; }
 
 /* Trenner + aufklappbarer Erledigt-Bereich */
 .done-divider { display:flex; align-items:center; gap:10px; margin:16px 0 8px; cursor:pointer; user-select:none; -webkit-user-select:none; }
@@ -315,8 +321,52 @@ body.modal-open { overflow:hidden; touch-action:none; }
     </div>
 
     <div class="list" id="list"></div>
-    <div class="long-press-hint">Lang drücken zum Bearbeiten</div>
   </div>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <h2 style="margin:0" id="detailTitle"></h2>
+      <button class="secondary" id="detailEditBtn" style="flex:0 0 auto;padding:8px 16px;font-size:13px;">✏️ Bearbeiten</button>
+    </div>
+    <div class="modal-section" id="detailNotesSection">
+      <label>Notiz</label>
+      <div class="detail-value" id="detailNotes"></div>
+    </div>
+    <div class="modal-section" id="detailCategorySection">
+      <label>Kategorie</label>
+      <div class="detail-value" id="detailCategory"></div>
+    </div>
+    <div class="modal-section" id="detailAssigneeSection">
+      <label>Für</label>
+      <div class="detail-value" id="detailAssignee"></div>
+    </div>
+    <div class="modal-section" id="detailPrioritySection">
+      <label>Priorität</label>
+      <div class="detail-value" id="detailPriority"></div>
+    </div>
+    <div class="modal-section" id="detailDueSection">
+      <label>Fällig am</label>
+      <div class="detail-value" id="detailDue"></div>
+    </div>
+    <div class="modal-section" id="detailRecurringSection">
+      <label>Wiederholen</label>
+      <div class="detail-value" id="detailRecurring"></div>
+    </div>
+    <div class="modal-section" id="detailPhotoSection">
+      <label>Foto</label>
+      <img id="detailPhoto" class="detail-photo" src="" alt="">
+    </div>
+    <button class="secondary" id="closeDetailBtn">Schließen</button>
+  </div>
+</div>
+
+<!-- Fullscreen Image Viewer -->
+<div id="imgViewer" class="hidden">
+  <button id="imgViewerClose">✕</button>
+  <img id="imgViewerImg" src="" alt="">
 </div>
 
 <!-- Settings Modal -->
@@ -526,6 +576,16 @@ const editRecurringInput=$('editRecurringInput');
 const editPhotoBtn=$('editPhotoBtn'), editPhotoInput=$('editPhotoInput');
 const editPhotoPreview=$('editPhotoPreview'), editPhotoRemoveBtn=$('editPhotoRemoveBtn');
 const cancelEditBtn=$('cancelEditBtn'), saveEditBtn=$('saveEditBtn');
+const detailModal=$('detailModal'), detailTitle=$('detailTitle');
+const detailNotes=$('detailNotes'), detailNotesSection=$('detailNotesSection');
+const detailCategory=$('detailCategory'), detailCategorySection=$('detailCategorySection');
+const detailAssignee=$('detailAssignee'), detailAssigneeSection=$('detailAssigneeSection');
+const detailPriority=$('detailPriority'), detailPrioritySection=$('detailPrioritySection');
+const detailDue=$('detailDue'), detailDueSection=$('detailDueSection');
+const detailRecurring=$('detailRecurring'), detailRecurringSection=$('detailRecurringSection');
+const detailPhoto=$('detailPhoto'), detailPhotoSection=$('detailPhotoSection');
+const detailEditBtn=$('detailEditBtn'), closeDetailBtn=$('closeDetailBtn');
+const imgViewer=$('imgViewer'), imgViewerImg=$('imgViewerImg'), imgViewerClose=$('imgViewerClose');
 
 let unsubTodos=null, unsubCat=null, unsubAsg=null, unsubStats=null;
 let categories=[], assignees=[], currentTodos=[], editingTodoId=null;
@@ -1014,28 +1074,162 @@ function render(todos){
   }
 }
 
-// ---- Long press (edit) ----
-function addGestures(wrapper,content,todoId){
-  let longTimer=null, moved=false, sx=0, sy=0;
+// ---- Detail Modal ----
+let detailTodoId = null;
 
-  function startPress(){
+function openDetailModal(todoId){
+  const todo = currentTodos.find(t=>t.id===todoId); if(!todo) return;
+  detailTodoId = todoId;
+  detailTitle.textContent = todo.text;
+
+  // Notiz
+  if(todo.notes){ detailNotes.textContent=todo.notes; detailNotesSection.classList.remove('hidden'); }
+  else detailNotesSection.classList.add('hidden');
+
+  // Kategorie
+  if(todo.category){ detailCategory.textContent=todo.category; detailCategorySection.classList.remove('hidden'); }
+  else detailCategorySection.classList.add('hidden');
+
+  // Zuständig
+  if(todo.assignee){ detailAssignee.textContent=todo.assignee; detailAssigneeSection.classList.remove('hidden'); }
+  else detailAssigneeSection.classList.add('hidden');
+
+  // Priorität
+  if(todo.priority){
+    detailPriority.textContent={'1':'🔴 Prio 1','2':'🟡 Prio 2','3':'🟢 Prio 3'}[todo.priority]||'';
+    detailPrioritySection.classList.remove('hidden');
+  } else detailPrioritySection.classList.add('hidden');
+
+  // Fälligkeitsdatum
+  if(todo.dueDate){ detailDue.textContent=formatDate(todo.dueDate); detailDueSection.classList.remove('hidden'); }
+  else detailDueSection.classList.add('hidden');
+
+  // Wiederholen
+  if(todo.recurring){ detailRecurring.textContent=recurringLabel(todo.recurring); detailRecurringSection.classList.remove('hidden'); }
+  else detailRecurringSection.classList.add('hidden');
+
+  // Foto
+  if(todo.photo){
+    detailPhoto.src=todo.photo;
+    detailPhotoSection.classList.remove('hidden');
+  } else detailPhotoSection.classList.add('hidden');
+
+  detailModal.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+
+function closeDetailModal(){
+  detailModal.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  detailTodoId = null;
+}
+
+closeDetailBtn.addEventListener('click', closeDetailModal);
+detailEditBtn.addEventListener('click', ()=>{
+  const id = detailTodoId;
+  closeDetailModal();
+  openEditModal(id);
+});
+
+// ---- Fullscreen Image Viewer mit Pinch-Zoom ----
+let _vScale=1, _vLastScale=1, _vX=0, _vY=0, _vLastX=0, _vLastY=0;
+let _vPinching=false, _vDist0=0, _vMid={x:0,y:0};
+let _vPointers=[];
+let _vDblTimer=null;
+
+function openImgViewer(src){
+  imgViewerImg.src=src;
+  _vScale=1; _vX=0; _vY=0;
+  imgViewerImg.style.transform='';
+  imgViewer.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+function closeImgViewer(){
+  imgViewer.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+  imgViewerImg.src='';
+}
+function _vApply(){ imgViewerImg.style.transform=`translate(${_vX}px,${_vY}px) scale(${_vScale})`; }
+function _vDist(a,b){ return Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY); }
+
+detailPhoto.addEventListener('click',()=>{ if(detailPhoto.src) openImgViewer(detailPhoto.src); });
+imgViewerClose.addEventListener('click', closeImgViewer);
+imgViewer.addEventListener('click', e=>{ if(e.target===imgViewer) closeImgViewer(); });
+
+// Pointer events for pan + pinch
+imgViewerImg.addEventListener('pointerdown', e=>{
+  imgViewerImg.setPointerCapture(e.pointerId);
+  _vPointers.push(e);
+  if(_vPointers.length===2){
+    _vPinching=true;
+    _vDist0=_vDist(_vPointers[0],_vPointers[1]);
+    _vLastScale=_vScale;
+    _vMid={ x:(_vPointers[0].clientX+_vPointers[1].clientX)/2, y:(_vPointers[0].clientY+_vPointers[1].clientY)/2 };
+  } else {
+    _vPinching=false;
+    _vLastX=e.clientX; _vLastY=e.clientY;
+  }
+  // Double-tap to zoom
+  if(_vDblTimer){
+    clearTimeout(_vDblTimer); _vDblTimer=null;
+    if(_vScale>1){ _vScale=1; _vX=0; _vY=0; } else { _vScale=2.5; }
+    _vApply(); return;
+  }
+  _vDblTimer=setTimeout(()=>{ _vDblTimer=null; },280);
+});
+
+imgViewerImg.addEventListener('pointermove', e=>{
+  const idx=_vPointers.findIndex(p=>p.pointerId===e.pointerId);
+  if(idx>=0) _vPointers[idx]=e;
+  if(_vPinching && _vPointers.length===2){
+    const d=_vDist(_vPointers[0],_vPointers[1]);
+    _vScale=Math.max(1,Math.min(6, _vLastScale*(d/_vDist0)));
+    _vApply();
+  } else if(!_vPinching && _vPointers.length===1){
+    _vX+=e.clientX-_vLastX; _vY+=e.clientY-_vLastY;
+    _vLastX=e.clientX; _vLastY=e.clientY;
+    _vApply();
+  }
+});
+
+imgViewerImg.addEventListener('pointerup', e=>{
+  _vPointers=_vPointers.filter(p=>p.pointerId!==e.pointerId);
+  if(_vPointers.length<2) _vPinching=false;
+  if(_vScale<=1){ _vScale=1; _vX=0; _vY=0; _vApply(); }
+});
+
+imgViewerImg.addEventListener('pointercancel', e=>{
+  _vPointers=_vPointers.filter(p=>p.pointerId!==e.pointerId);
+  _vPinching=false;
+});
+
+// ---- Tap (detail) + Long press (edit) ----
+function addGestures(wrapper,content,todoId){
+  let longTimer=null, moved=false, sx=0, sy=0, tapStart=0;
+
+  function startPress(x,y){
+    sx=x; sy=y; moved=false; tapStart=Date.now();
     wrapper.classList.add('long-pressing');
   }
   function cancelPress(){
     clearTimeout(longTimer);
     wrapper.classList.remove('long-pressing');
   }
-  function firePress(){
+  function fireLongPress(){
     wrapper.classList.remove('long-pressing');
     wrapper.classList.add('long-pressed');
     setTimeout(()=>wrapper.classList.remove('long-pressed'),350);
     openEditModal(todoId);
   }
+  function fireTap(){
+    openDetailModal(todoId);
+  }
 
+  // Touch
   wrapper.addEventListener('touchstart',e=>{
-    sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved=false;
-    startPress();
-    longTimer=setTimeout(()=>{ if(!moved) firePress(); },600);
+    const t=e.touches[0];
+    startPress(t.clientX, t.clientY);
+    longTimer=setTimeout(()=>{ if(!moved) fireLongPress(); },600);
   },{passive:true});
 
   wrapper.addEventListener('touchmove',e=>{
@@ -1043,11 +1237,34 @@ function addGestures(wrapper,content,todoId){
     if(mx>10||my>10){ moved=true; cancelPress(); }
   },{passive:true});
 
-  wrapper.addEventListener('touchend',cancelPress);
+  wrapper.addEventListener('touchend', e=>{
+    clearTimeout(longTimer);
+    wrapper.classList.remove('long-pressing');
+    if(!moved && Date.now()-tapStart<600){
+      // Make sure the tap wasn't on checkbox, delete or restore btn
+      const target=e.target;
+      if(!target.closest('.checkbox') && !target.closest('.del') && !target.closest('.restore-btn')){
+        fireTap();
+      }
+    }
+  });
 
+  // Mouse
   let mTimer=null;
-  wrapper.addEventListener('mousedown',()=>{ startPress(); mTimer=setTimeout(firePress,600); });
-  wrapper.addEventListener('mouseup',()=>{ clearTimeout(mTimer); wrapper.classList.remove('long-pressing'); });
+  wrapper.addEventListener('mousedown', e=>{
+    startPress(e.clientX, e.clientY);
+    mTimer=setTimeout(fireLongPress,600);
+  });
+  wrapper.addEventListener('mouseup', e=>{
+    clearTimeout(mTimer);
+    wrapper.classList.remove('long-pressing');
+    if(!moved && Date.now()-tapStart<600){
+      const target=e.target;
+      if(!target.closest('.checkbox') && !target.closest('.del') && !target.closest('.restore-btn')){
+        fireTap();
+      }
+    }
+  });
   wrapper.addEventListener('mouseleave',()=>{ clearTimeout(mTimer); wrapper.classList.remove('long-pressing'); });
 }
 
