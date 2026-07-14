@@ -806,6 +806,7 @@ closeOnBackdrop(settingsModal, ()=>{ settingsModal.classList.add('hidden'); docu
 closeOnBackdrop(cleanupModal,  ()=>{ cleanupModal.classList.add('hidden');  document.body.classList.remove('modal-open'); });
 closeOnBackdrop(reportModal,   ()=>{ reportModal.classList.add('hidden');   document.body.classList.remove('modal-open'); reportModal.querySelector('h2').textContent='Wer hat was erledigt'; });
 closeOnBackdrop(editModal,     ()=>{ editModal.classList.add('hidden');     document.body.classList.remove('modal-open'); editingTodoId=null; });
+closeOnBackdrop(detailModal,   ()=>{ closeDetailModal(); });
 
 // ---- Filter chips ----
 // Search toggle
