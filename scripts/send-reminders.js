@@ -135,6 +135,8 @@ async function sendCreationNotifications() {
 
   for (const doc of snapshot.docs) {
     const todo = doc.data();
+    // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
+    await doc.ref.update({ notifiedCreation: true });
     const tokens = await getTokensExcept(todo.authorEmail || null);
     const title = 'Neuer Eintrag';
     const body = todo.text;
@@ -142,7 +144,6 @@ async function sendCreationNotifications() {
       const res = await sendToTokens(tokens, title, body, doc.id);
       console.log(`Neuer Eintrag "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
     } catch (e) { console.error(`Fehler bei Neu-Benachrichtigung "${todo.text}":`, e.message); }
-    await doc.ref.update({ notifiedCreation: true });
   }
 }
 
@@ -153,15 +154,16 @@ async function sendCompletionNotifications() {
 
   for (const doc of snapshot.docs) {
     const todo = doc.data();
-    if (!todo.done) { await doc.ref.update({ notifiedCompletion: true }); continue; }
+    // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
+    await doc.ref.update({ notifiedCompletion: true });
+    if (!todo.done) { continue; }
     const tokens = await getTokensExcept(todo.completedByEmail || null);
-    const title = 'Erledigt \u2713';
+    const title = 'Erledigt ✓';
     const body = todo.text;
     try {
       const res = await sendToTokens(tokens, title, body, doc.id);
       console.log(`Erledigt "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
     } catch (e) { console.error(`Fehler bei Erledigt-Benachrichtigung "${todo.text}":`, e.message); }
-    await doc.ref.update({ notifiedCompletion: true });
   }
 }
 
