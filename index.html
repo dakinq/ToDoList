@@ -851,15 +851,20 @@ function subscribeToTodos(){
       todos.push({id:doc.id,...d});
     });
     currentTodos=todos; render(todos);
-    // Push-Notification Deep Link: ?editId=<todoId>
-    const urlParams=new URLSearchParams(window.location.search);
-    const editId=urlParams.get('editId');
-    if(editId){
-      const target=todos.find(t=>t.id===editId);
-      if(target){
-        openEditModal(editId);
-        // URL bereinigen ohne Seitenreload
-        window.history.replaceState({},'',window.location.pathname);
+    // Push-Notification Deep Link: ?editId=<todoId> – nur einmal beim ersten Laden
+    if(!window._deepLinkHandled){
+      window._deepLinkHandled=true;
+      const urlParams=new URLSearchParams(window.location.search);
+      const editId=urlParams.get('editId');
+      if(editId){
+        const target=todos.find(t=>t.id===editId);
+        if(target){
+          // Kurz warten damit das Modal-CSS bereit ist
+          setTimeout(()=>{
+            openEditModal(editId);
+            window.history.replaceState({},'',window.location.pathname);
+          }, 300);
+        }
       }
     }
   });
