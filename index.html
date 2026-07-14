@@ -1237,6 +1237,41 @@ cleanupConfirmBtn.addEventListener('click', async () => {
   cleanupModal.classList.add('hidden');document.body.classList.remove('modal-open');
 });
 
+// ---- Hilfsfunktion: ISO-Wochenschlüssel für einen Timestamp ----
+function getWeekKeyForTs(ts){
+  const ms = ts && ts.toMillis ? ts.toMillis() : (ts || 0);
+  const d = new Date(ms);
+  const utc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dow = utc.getUTCDay() || 7;
+  utc.setUTCDate(utc.getUTCDate() + 4 - dow);
+  const y = utc.getUTCFullYear();
+  const wk = Math.ceil(((utc - new Date(Date.UTC(y,0,1))) / 86400000 + 1) / 7);
+  return y + '-W' + String(wk).padStart(2,'0');
+}
+
+// ---- Wochenanfang (Montag 00:00 Uhr) für die aktuelle Woche ----
+function currentWeekStart(){
+  const now = new Date();
+  const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const dow = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() - (dow - 1));
+  return d; // Montag 00:00 UTC
+}
+
+// ---- Wochenbezeichnung (z. B. "KW 28 · 07.07 – 13.07.2025") ----
+function weekLabel(weekKey){
+  const [y, w] = weekKey.split('-W').map(Number);
+  // Montag der Woche berechnen
+  const jan4 = new Date(Date.UTC(y, 0, 4));
+  const dow4 = jan4.getUTCDay() || 7;
+  const monday = new Date(jan4);
+  monday.setUTCDate(jan4.getUTCDate() - (dow4 - 1) + (w - 1) * 7);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const fmt = d => d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', timeZone:'UTC'});
+  return 'KW\u00a0' + w + '\u00a0\u00b7\u00a0' + fmt(monday) + '\u00a0\u2013\u00a0' + fmt(sunday) + '.' + y;
+}
+
 // ---- Report: Wer hat was erledigt ----
 async function openReportForEmail(filterEmail, filterName){
   reportBody.innerHTML = '<div class="report-empty">Lädt...</div>';
@@ -1254,15 +1289,69 @@ async function openReportForEmail(filterEmail, filterName){
       reportBody.innerHTML = '<div class="report-empty">Keine Einträge gefunden.</div>';
       return;
     }
-    docs.forEach(d => {
-      const row = document.createElement('div');
-      row.className = 'report-row';
-      const who = filterEmail ? '' : getDisplayName(d.completedByEmail);
-      row.innerHTML = '<span class="r-text">'+escapeHtml(d.text)+(d.category?'<br><span style="font-size:11px;color:var(--sub)">'+escapeHtml(d.category)+'</span>':'')+'</span>'
-        +(who?'<span class="r-who">'+escapeHtml(who)+'<br></span>':'')
-        +'<span class="r-who" style="text-align:right"><span class="r-date">'+formatDateTime(d.completedAt)+'</span></span>';
-      reportBody.appendChild(row);
-    });
+
+    if (filterEmail) {
+      // ---- Personen-Report: nur aktuelle Woche ----
+      const weekStart = currentWeekStart();
+      const thisDocs = docs.filter(d => {
+        const ms = d.completedAt && d.completedAt.toMillis ? d.completedAt.toMillis() : 0;
+        return ms >= weekStart.getTime();
+      });
+      if (thisDocs.length === 0) {
+        reportBody.innerHTML = '<div class="report-empty">Diese Woche noch nichts erledigt.</div>';
+        return;
+      }
+      // Nach Datum aufsteigend
+      thisDocs.sort((a,b) => {
+        const am = a.completedAt && a.completedAt.toMillis ? a.completedAt.toMillis() : 0;
+        const bm = b.completedAt && b.completedAt.toMillis ? b.completedAt.toMillis() : 0;
+        return am - bm;
+      });
+      thisDocs.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'report-row';
+        row.innerHTML = '<span class="r-text">'+escapeHtml(d.text)+(d.category?'<br><span style="font-size:11px;color:var(--sub)">'+escapeHtml(d.category)+'</span>':'')+'</span>'
+          +'<span class="r-who" style="text-align:right"><span class="r-date">'+formatDateTime(d.completedAt)+'</span></span>';
+        reportBody.appendChild(row);
+      });
+    } else {
+      // ---- Gesamt-Report: nach Wochen gruppiert, innerhalb jeder Woche nach User dann Datum ----
+      // Wochen-Gruppen sammeln
+      const weekMap = {};
+      docs.forEach(d => {
+        const wk = getWeekKeyForTs(d.completedAt);
+        if (!weekMap[wk]) weekMap[wk] = [];
+        weekMap[wk].push(d);
+      });
+      // Wochen absteigend (neueste zuerst)
+      const sortedWeeks = Object.keys(weekMap).sort((a,b) => b.localeCompare(a));
+      sortedWeeks.forEach(wk => {
+        // Wochen-Header
+        const header = document.createElement('div');
+        header.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sage);padding:14px 0 6px;border-bottom:2px solid var(--line);margin-bottom:4px;';
+        header.textContent = weekLabel(wk);
+        reportBody.appendChild(header);
+
+        // Einträge: erst nach User-Name, dann nach Datum aufsteigend
+        const entries = weekMap[wk].slice().sort((a,b) => {
+          const na = getDisplayName(a.completedByEmail).toLowerCase();
+          const nb = getDisplayName(b.completedByEmail).toLowerCase();
+          if (na !== nb) return na.localeCompare(nb, 'de');
+          const am = a.completedAt && a.completedAt.toMillis ? a.completedAt.toMillis() : 0;
+          const bm = b.completedAt && b.completedAt.toMillis ? b.completedAt.toMillis() : 0;
+          return am - bm;
+        });
+
+        entries.forEach(d => {
+          const row = document.createElement('div');
+          row.className = 'report-row';
+          const who = getDisplayName(d.completedByEmail);
+          row.innerHTML = '<span class="r-text">'+escapeHtml(d.text)+(d.category?'<br><span style="font-size:11px;color:var(--sub)">'+escapeHtml(d.category)+'</span>':'')+'</span>'
+            +'<span class="r-who" style="text-align:right">'+escapeHtml(who)+'<br><span class="r-date">'+formatDateTime(d.completedAt)+'</span></span>';
+          reportBody.appendChild(row);
+        });
+      });
+    }
   } catch (e) {
     reportBody.innerHTML = '<div class="report-empty">Fehler beim Laden.</div>';
     console.error(e);
