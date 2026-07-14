@@ -362,7 +362,6 @@ body.modal-open { overflow:hidden; touch-action:none; }
     <div class="modal-section">
       <label>Statistik</label>
       <button class="secondary" id="viewReportBtn">Report: Wer hat was erledigt</button>
-      <button class="secondary" id="dedupeReportBtn">Report: Alte Duplikate entfernen</button>
       <button class="danger" id="resetStatsBtn">Wochen-Zähler zurücksetzen</button>
     </div>
 
@@ -514,7 +513,7 @@ const statsBar=$('statsBar');
 const settingsBtn=$('settingsBtn'), settingsModal=$('settingsModal'), closeSettingsBtn=$('closeSettingsBtn'), darkModeSettingsBtn=$('darkModeSettingsBtn'), signoutSettingsBtn=$('signoutSettingsBtn');
 const cleanupThreshold=$('cleanupThreshold'), cleanupPreviewBtn=$('cleanupPreviewBtn');
 const cleanupModal=$('cleanupModal'), cleanupReportBody=$('cleanupReportBody'), cleanupCancelBtn=$('cleanupCancelBtn'), cleanupConfirmBtn=$('cleanupConfirmBtn');
-const viewReportBtn=$('viewReportBtn'), resetStatsBtn=$('resetStatsBtn'), dedupeReportBtn=$('dedupeReportBtn');
+const viewReportBtn=$('viewReportBtn'), resetStatsBtn=$('resetStatsBtn');
 const reportModal=$('reportModal'), reportBody=$('reportBody'), closeReportBtn=$('closeReportBtn');
 const categoryChips=$('categoryChips'), assigneeChips=$('assigneeChips');
 const newCategoryInput=$('newCategoryInput'), newAssigneeInput=$('newAssigneeInput');
@@ -1323,13 +1322,31 @@ async function openReportForEmail(filterEmail, filterName){
         if (!weekMap[wk]) weekMap[wk] = [];
         weekMap[wk].push(d);
       });
-      // Wochen absteigend (neueste zuerst)
+      // Stats für alle betroffenen Wochen laden
       const sortedWeeks = Object.keys(weekMap).sort((a,b) => b.localeCompare(a));
+      const statsCache = {};
+      await Promise.all(sortedWeeks.map(async wk => {
+        try {
+          const s = await statsRef.doc(wk).get();
+          statsCache[wk] = s.exists ? s.data() : {};
+        } catch(e) { statsCache[wk] = {}; }
+      }));
+
       sortedWeeks.forEach(wk => {
-        // Wochen-Header
+        // Wochen-Header mit Wochenstand
+        const statsData = statsCache[wk] || {};
+        const statParts = Object.entries(statsData)
+          .map(([key, count]) => {
+            const email = knownUsers[key] || key;
+            return escapeHtml(getDisplayName(email)) + ':&thinsp;<strong>' + count + '&thinsp;✓</strong>';
+          })
+          .join('&ensp;·&ensp;');
+
         const header = document.createElement('div');
-        header.style.cssText = 'font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sage);padding:14px 0 6px;border-bottom:2px solid var(--line);margin-bottom:4px;';
-        header.textContent = weekLabel(wk);
+        header.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:14px 0 6px;border-bottom:2px solid var(--line);margin-bottom:4px;';
+        header.innerHTML = '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--sage);white-space:nowrap;">'
+          + escapeHtml(weekLabel(wk)) + '</span>'
+          + (statParts ? '<span style="font-size:11px;color:var(--sub);text-align:right;flex-shrink:0;">' + statParts + '</span>' : '');
         reportBody.appendChild(header);
 
         // Einträge: erst nach User-Name, dann nach Datum aufsteigend
@@ -1358,48 +1375,6 @@ async function openReportForEmail(filterEmail, filterName){
   }
 }
 
-// ---- Alte Report-Duplikate (aus der Zeit vor der ID-Fixierung) entfernen ----
-dedupeReportBtn.addEventListener('click', async () => {
-  if (!confirm('Alte doppelte Report-Einträge für denselben Task zusammenführen? Es bleibt jeweils nur der neueste Eintrag erhalten.')) return;
-  dedupeReportBtn.disabled = true;
-  const originalLabel = dedupeReportBtn.textContent;
-  dedupeReportBtn.textContent = 'Bereinige...';
-  try {
-    const snap = await completionsRef.get();
-    // Gruppieren nach Task-Fingerabdruck (Text + Kategorie + Zuständige/r + Person),
-    // da alte Einträge keine todoId besitzen und der Task-Text der einzige
-    // verlässliche Anhaltspunkt ist, um "denselben" Task wiederzuerkennen.
-    const groups = {};
-    snap.forEach(doc => {
-      const d = doc.data();
-      const fingerprint = [d.text||'', d.category||'', d.assignee||'', d.completedByEmail||''].join('|||');
-      if (!groups[fingerprint]) groups[fingerprint] = [];
-      groups[fingerprint].push({ id: doc.id, ms: d.completedAt && d.completedAt.toMillis ? d.completedAt.toMillis() : 0 });
-    });
-    const idsToDelete = [];
-    Object.values(groups).forEach(entries => {
-      if (entries.length <= 1) return;
-      entries.sort((a,b) => b.ms - a.ms); // neuester zuerst
-      entries.slice(1).forEach(e => idsToDelete.push(e.id)); // alle außer dem neuesten löschen
-    });
-    if (idsToDelete.length === 0) {
-      alert('Keine Duplikate gefunden.');
-    } else {
-      // Firestore-Batches sind auf 500 Operationen begrenzt -> in Blöcken löschen
-      for (let i = 0; i < idsToDelete.length; i += 450) {
-        const batch = db.batch();
-        idsToDelete.slice(i, i + 450).forEach(id => batch.delete(completionsRef.doc(id)));
-        await batch.commit();
-      }
-      alert(idsToDelete.length + ' doppelte Report-Einträge wurden entfernt.');
-    }
-  } catch (e) {
-    console.error(e);
-    alert('Bereinigung fehlgeschlagen, siehe Konsole.');
-  }
-  dedupeReportBtn.disabled = false;
-  dedupeReportBtn.textContent = originalLabel;
-});
 
 viewReportBtn.addEventListener('click', ()=>openReportForEmail(null, null));
 closeReportBtn.addEventListener('click', () => { reportModal.classList.add('hidden');document.body.classList.remove('modal-open'); reportModal.querySelector('h2').textContent='Wer hat was erledigt'; });
