@@ -245,6 +245,56 @@ body.dark .date-badge { color:var(--gold); }
   font-family:'Fraunces',serif; font-style:italic; font-size:16px;
 }
 
+
+/* ---- Heute: Celebration ---- */
+@keyframes celebrationPulse {
+  0%   { background-color: var(--paper); }
+  20%  { background-color: rgba(107,124,99,0.18); }
+  60%  { background-color: rgba(107,124,99,0.10); }
+  100% { background-color: var(--paper); }
+}
+@keyframes checkPop {
+  0%   { transform: scale(0.7); opacity: 0; }
+  55%  { transform: scale(1.15); opacity: 1; }
+  80%  { transform: scale(0.95); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes textSlideUp {
+  0%   { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes itemGlow {
+  0%   { box-shadow: none; }
+  40%  { box-shadow: 0 0 0 3px var(--sage); }
+  100% { box-shadow: none; }
+}
+@keyframes fadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; pointer-events: none; }
+}
+
+.today-celebration {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 48px 20px; gap: 0;
+  animation: celebrationPulse 1.4s ease forwards;
+}
+.celebration-check {
+  font-size: 72px; line-height: 1;
+  animation: checkPop .5s cubic-bezier(.36,.07,.19,.97) forwards;
+}
+.celebration-title {
+  font-family: 'Fraunces', serif; font-style: italic; font-weight: 600;
+  font-size: 26px; color: var(--sage); margin: 12px 0 6px; text-align: center;
+  animation: textSlideUp .45s .2s ease both;
+}
+.celebration-sub {
+  font-size: 14px; color: var(--sub); text-align: center;
+  animation: textSlideUp .45s .35s ease both;
+}
+.today-item-done-glow {
+  animation: itemGlow .8s ease forwards !important;
+}
+
 /* ---- Morning Review Modal ---- */
 .morning-overlay {
   position:fixed; inset:0; background:rgba(46,42,38,0.55);
@@ -1731,35 +1781,67 @@ tabToday.addEventListener('click', ()=>switchView(1));
 })();
 
 // --- Heute Liste rendern ---
+// Merkt ob beim letzten Render noch offene Tasks da waren
+let _todayWasAllDone = false;
+
 function renderTodayList(todos){
   const today = todayDateStr();
   const email = auth.currentUser ? auth.currentUser.email : null;
-  // Nur Tasks die dieser User heute eingeplant hat (und nicht gelöscht)
   const planned = todos.filter(t =>
     !t.deleted &&
     t.plannedBy === email &&
     t.plannedDate === today
   );
 
-  // Badge aktualisieren
   const openCount = planned.filter(t=>!t.done).length;
-  todayBadge.textContent = openCount;
+  const allDoneNow = planned.length > 0 && openCount === 0;
+
+  // Badge: zeigt offene Tasks, bei Alles-erledigt eine Trophäe
+  todayBadge.textContent = allDoneNow ? '🏆' : openCount;
   todayBadge.style.display = planned.length > 0 ? 'inline-block' : 'none';
+
+  // Celebration auslösen wenn gerade alle erledigt wurden (Zustandswechsel)
+  const shouldCelebrate = allDoneNow && !_todayWasAllDone;
+  _todayWasAllDone = allDoneNow;
 
   todayList.innerHTML = '';
   if(planned.length === 0){
+    _todayWasAllDone = false;
     todayList.innerHTML = '<div class="today-empty">Noch nichts für heute geplant.<br><br>Tippe auf <strong>📋 Neu planen</strong>.</div>';
     return;
   }
 
-  // Offene zuerst, dann erledigte
-  const open   = planned.filter(t=>!t.done);
-  const done   = planned.filter(t=>t.done);
-  const sorted = [...open, ...done];
+  if(allDoneNow){
+    // Celebration: alle Items anzeigen + Feier-Overlay
+    const cel = document.createElement('div');
+    cel.className = 'today-celebration';
+    cel.innerHTML =
+      '<div class="celebration-check">✅</div>' +
+      '<div class="celebration-title">Alles geschafft!</div>' +
+      '<div class="celebration-sub">Du hast heute alle geplanten Aufgaben erledigt. 💪</div>';
+    todayList.appendChild(cel);
 
-  sorted.forEach(todo=>{
-    const el = buildTodayItem(todo);
-    todayList.appendChild(el);
+    // Tasks darunter trotzdem anzeigen (alle durchgestrichen)
+    const doneSection = document.createElement('div');
+    doneSection.className = 'list';
+    doneSection.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin-top:16px;';
+    planned.forEach(todo=>{
+      const el = buildTodayItem(todo);
+      if(shouldCelebrate) el.classList.add('today-item-done-glow');
+      doneSection.appendChild(el);
+    });
+    todayList.appendChild(doneSection);
+
+    // Vibration als Haptic-Feedback (iOS PWA)
+    if(shouldCelebrate && navigator.vibrate) navigator.vibrate([40, 60, 80]);
+    return;
+  }
+
+  // Normal: Offene zuerst, dann erledigte
+  const open = planned.filter(t=>!t.done);
+  const done = planned.filter(t=>t.done);
+  [...open, ...done].forEach(todo=>{
+    todayList.appendChild(buildTodayItem(todo));
   });
 }
 
