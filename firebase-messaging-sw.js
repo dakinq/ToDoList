@@ -12,6 +12,9 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// onBackgroundMessage wird nur aufgerufen wenn die App im Hintergrund ist.
+// Die Vordergrund-Benachrichtigung wird in index.html via messaging.onMessage() behandelt.
+// Dadurch wird jede Nachricht nur einmal angezeigt.
 messaging.onBackgroundMessage((payload) => {
   const title = (payload.notification && payload.notification.title) || 'Erinnerung';
   const options = {
