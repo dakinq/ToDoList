@@ -189,6 +189,119 @@ body.dark .date-badge { color:var(--gold); }
 .done-section.open { max-height:9999px; }
 .hidden { display:none !important; }
 
+/* ---- View Switcher (Alle / Heute) ---- */
+.view-switcher {
+  display:flex; align-items:center; justify-content:center;
+  gap:0; margin:0 0 16px; background:var(--card);
+  border:1px solid var(--line); border-radius:12px; padding:3px;
+  box-shadow:var(--shadow);
+}
+.view-tab {
+  flex:1; border:none; background:transparent; color:var(--sub);
+  font-family:'Karla',sans-serif; font-weight:700; font-size:14px;
+  padding:9px 6px; border-radius:9px; cursor:pointer;
+  transition:background .18s, color .18s; display:flex;
+  align-items:center; justify-content:center; gap:6px;
+}
+.view-tab.active { background:var(--sage); color:#fff; }
+.view-tab .today-badge {
+  background:rgba(255,255,255,0.3); color:#fff;
+  font-size:11px; font-weight:700; border-radius:10px;
+  padding:1px 7px; min-width:18px; text-align:center;
+  display:none;
+}
+.view-tab.active .today-badge { display:inline-block; }
+.today-badge-inactive {
+  background:var(--clay); color:#fff;
+  font-size:11px; font-weight:700; border-radius:10px;
+  padding:1px 7px; min-width:18px; text-align:center;
+}
+
+/* Swipe container */
+.views-wrap { overflow:hidden; width:100%; position:relative; }
+.views-slider {
+  display:flex; width:200%;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  will-change:transform;
+}
+.view-pane { width:50%; flex-shrink:0; }
+
+/* ---- Today View ---- */
+.today-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px;
+}
+.today-title {
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:20px; color:var(--ink);
+}
+.today-replan-btn {
+  border:1px solid var(--line); background:var(--card); color:var(--sage);
+  border-radius:20px; padding:5px 13px; font-family:'Karla',sans-serif;
+  font-weight:700; font-size:12px; cursor:pointer; white-space:nowrap;
+}
+.today-empty {
+  text-align:center; padding:40px 20px; color:var(--sub);
+  font-family:'Fraunces',serif; font-style:italic; font-size:16px;
+}
+
+/* ---- Morning Review Modal ---- */
+.morning-overlay {
+  position:fixed; inset:0; background:rgba(46,42,38,0.55);
+  display:flex; align-items:flex-end; justify-content:center;
+  z-index:20; padding:0;
+}
+.morning-modal {
+  background:var(--paper); border-radius:20px 20px 0 0;
+  padding:20px 20px 36px; width:100%; max-width:560px;
+  max-height:82vh; display:flex; flex-direction:column;
+  overscroll-behavior:contain;
+}
+.morning-modal h2 {
+  font-family:'Fraunces',serif; font-style:italic; font-weight:600;
+  font-size:22px; margin:0 0 4px; color:var(--ink);
+}
+.morning-sub { font-size:13px; color:var(--sub); margin:0 0 14px; }
+.morning-list {
+  overflow-y:auto; flex:1; display:flex; flex-direction:column;
+  gap:8px; margin-bottom:16px; -webkit-overflow-scrolling:touch;
+}
+.morning-item {
+  display:flex; align-items:center; gap:12px;
+  background:var(--card); border:2px solid var(--line);
+  border-radius:12px; padding:12px 14px; cursor:pointer;
+  transition:border-color .15s, background .15s;
+  -webkit-tap-highlight-color:transparent;
+  user-select:none; -webkit-user-select:none;
+}
+.morning-item.selected { border-color:var(--sage); background:rgba(107,124,99,0.09); }
+.morning-item.from-yesterday .morning-item-label::after {
+  content:' · von gestern'; font-size:11px; color:var(--clay); font-weight:700;
+}
+.morning-check {
+  width:24px; height:24px; border-radius:50%; border:2px solid var(--line);
+  flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  font-size:14px; font-weight:bold;
+  transition:background .15s, border-color .15s;
+}
+.morning-item.selected .morning-check { background:var(--sage); border-color:var(--sage); color:#fff; }
+.morning-item-body { flex:1; min-width:0; }
+.morning-item-label { font-size:15px; line-height:1.35; word-break:break-word; font-weight:500; }
+.morning-item-meta { font-size:11px; color:var(--sub); margin-top:3px; }
+.morning-item.prio-1 { border-color:#D4776B; } .morning-item.prio-2 { border-color:#C9A24B; }
+.morning-item.selected.prio-1, .morning-item.selected.prio-2 { border-color:var(--sage); }
+.morning-actions { display:flex; flex-direction:column; gap:8px; flex-shrink:0; }
+.morning-confirm-btn {
+  border:none; background:var(--clay); color:#fff; border-radius:12px;
+  padding:14px; font-family:'Karla',sans-serif; font-weight:700;
+  font-size:16px; cursor:pointer; width:100%;
+}
+.morning-skip-btn {
+  border:none; background:transparent; color:var(--sub);
+  font-family:'Karla',sans-serif; font-size:13px; cursor:pointer;
+  padding:6px; text-align:center;
+}
+
 /* Modals */
 .modal-overlay { position:fixed; inset:0; background:rgba(46,42,38,0.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:10; overflow:hidden; }
 .modal { background:var(--paper); border-radius:14px; padding:22px; width:100%; max-width:420px; max-height:88vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; overscroll-behavior:contain; }
@@ -260,65 +373,102 @@ body.modal-open { overflow:hidden; touch-action:none; }
     <!-- Stats -->
     <div class="stats-bar" id="statsBar"></div>
 
-    <!-- Composer -->
-    <div class="composer">
-      <input id="textInput" type="text" placeholder="Was steht an?" maxlength="200">
-      <div class="field-row">
-        <div class="field-group">
-          <span class="field-label">Kategorie</span>
-          <select id="categoryInput"></select>
-        </div>
-        <div class="field-group">
-          <span class="field-label">Für</span>
-          <select id="assigneeInput"></select>
-        </div>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <span class="field-label">Priorität</span>
-          <select id="priorityInput">
-            <option value="">Keine</option>
-            <option value="1">🔴 Prio 1</option>
-            <option value="2">🟡 Prio 2</option>
-            <option value="3">🟢 Prio 3</option>
-          </select>
-        </div>
-        <div class="field-group">
-          <span class="field-label">Fällig am</span>
-          <div class="date-field-wrap is-empty" id="dueInputWrap">
-            <input id="dueInput" type="date">
-            <span class="date-placeholder">Datum wählen</span>
-          </div>
-        </div>
-      </div>
-      <button class="more-opts-btn" id="moreOptsBtn">⊕ Weitere Optionen</button>
-      <div class="extra-opts hidden" id="extraOpts">
-        <div class="field-row">
-          <div class="field-group">
-            <span class="field-label">Wiederholen</span>
-            <select id="recurringInput">
-              <option value="">Nie</option>
-              <option value="daily">Täglich</option>
-              <option value="weekly">Wöchentlich</option>
-              <option value="monthly">Monatlich</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <span class="field-label">Foto</span>
-            <button type="button" class="photo-add-btn" id="photoAddBtn">📷 Foto wählen</button>
-            <input type="file" id="photoInput" accept="image/*" class="hidden">
-          </div>
-        </div>
-        <div class="field-group">
-          <span class="field-label">Notiz</span>
-          <textarea id="notesInput" placeholder="Zusätzliche Details..." rows="2"></textarea>
-        </div>
-        <img id="photoPreview" class="photo-preview hidden">
-      </div>
-      <button class="add" id="addBtn" type="button">Hinzufügen</button>
+    <!-- View Switcher -->
+    <div class="view-switcher">
+      <button class="view-tab active" id="tabAll">📋 Alle</button>
+      <button class="view-tab" id="tabToday">☀️ Heute <span class="today-badge" id="todayBadge">0</span></button>
     </div>
 
-    <div class="list" id="list"></div>
+    <!-- Swipe Views -->
+    <div class="views-wrap" id="viewsWrap">
+      <div class="views-slider" id="viewsSlider">
+
+        <!-- Pane 0: Alle -->
+        <div class="view-pane" id="paneAll">
+          <!-- Composer -->
+          <div class="composer">
+            <input id="textInput" type="text" placeholder="Was steht an?" maxlength="200">
+            <div class="field-row">
+              <div class="field-group">
+                <span class="field-label">Kategorie</span>
+                <select id="categoryInput"></select>
+              </div>
+              <div class="field-group">
+                <span class="field-label">Für</span>
+                <select id="assigneeInput"></select>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field-group">
+                <span class="field-label">Priorität</span>
+                <select id="priorityInput">
+                  <option value="">Keine</option>
+                  <option value="1">🔴 Prio 1</option>
+                  <option value="2">🟡 Prio 2</option>
+                  <option value="3">🟢 Prio 3</option>
+                </select>
+              </div>
+              <div class="field-group">
+                <span class="field-label">Fällig am</span>
+                <div class="date-field-wrap is-empty" id="dueInputWrap">
+                  <input id="dueInput" type="date">
+                  <span class="date-placeholder">Datum wählen</span>
+                </div>
+              </div>
+            </div>
+            <button class="more-opts-btn" id="moreOptsBtn">⊕ Weitere Optionen</button>
+            <div class="extra-opts hidden" id="extraOpts">
+              <div class="field-row">
+                <div class="field-group">
+                  <span class="field-label">Wiederholen</span>
+                  <select id="recurringInput">
+                    <option value="">Nie</option>
+                    <option value="daily">Täglich</option>
+                    <option value="weekly">Wöchentlich</option>
+                    <option value="monthly">Monatlich</option>
+                  </select>
+                </div>
+                <div class="field-group">
+                  <span class="field-label">Foto</span>
+                  <button type="button" class="photo-add-btn" id="photoAddBtn">📷 Foto wählen</button>
+                  <input type="file" id="photoInput" accept="image/*" class="hidden">
+                </div>
+              </div>
+              <div class="field-group">
+                <span class="field-label">Notiz</span>
+                <textarea id="notesInput" placeholder="Zusätzliche Details..." rows="2"></textarea>
+              </div>
+              <img id="photoPreview" class="photo-preview hidden">
+            </div>
+            <button class="add" id="addBtn" type="button">Hinzufügen</button>
+          </div>
+          <div class="list" id="list"></div>
+        </div>
+
+        <!-- Pane 1: Heute -->
+        <div class="view-pane" id="paneToday">
+          <div class="today-header">
+            <div class="today-title">☀️ Heute</div>
+            <button class="today-replan-btn" id="todayReplanBtn">📋 Neu planen</button>
+          </div>
+          <div class="list" id="todayList"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Morning Review Modal -->
+<div class="morning-overlay hidden" id="morningOverlay">
+  <div class="morning-modal">
+    <h2>Guten Morgen! ☀️</h2>
+    <p class="morning-sub" id="morningSub">Was planst du heute zu erledigen?</p>
+    <div class="morning-list" id="morningList"></div>
+    <div class="morning-actions">
+      <button class="morning-confirm-btn" id="morningConfirmBtn">Los geht's!</button>
+      <button class="morning-skip-btn" id="morningSkipBtn">Überspringen</button>
+    </div>
   </div>
 </div>
 
@@ -636,7 +786,12 @@ auth.onAuthStateChanged(user=>{
     ensureDefaults().then(()=>{
       registerCurrentUser();
       subscribeToUsernames();
-      subscribeToCategories(); subscribeToAssignees(); subscribeToTodos(); subscribeToStats();
+      subscribeToCategories(); subscribeToAssignees();
+      // subscribeToTodos wird durch subscribeToTodosPatched() unten ersetzt
+      subscribeToStats();
+      // Morning-Review-fähiger Snapshot
+      if(typeof subscribeToTodosPatched === 'function') subscribeToTodosPatched();
+      else subscribeToTodos();
     });
   } else {
     loginView.classList.remove('hidden'); appView.classList.add('hidden');
@@ -1025,6 +1180,8 @@ function render(todos){
     listEl.appendChild(divider);
     listEl.appendChild(section);
   }
+  // Heute-Liste ebenfalls aktualisieren (falls schon initialisiert)
+  if(typeof renderTodayList === 'function') renderTodayList(todos);
 }
 
 // ---- Fullscreen Image Viewer mit Pinch-Zoom ----
@@ -1520,6 +1677,362 @@ if(messaging) messaging.onMessage((payload)=>{
     });
   }
 });
+
+// ============================================================
+// HEUTE-FEATURE
+// ============================================================
+
+// --- State ---
+let currentView = 0; // 0 = Alle, 1 = Heute
+let morningSelectedIds = new Set();
+
+const tabAll       = document.getElementById('tabAll');
+const tabToday     = document.getElementById('tabToday');
+const viewsSlider  = document.getElementById('viewsSlider');
+const todayList    = document.getElementById('todayList');
+const todayBadge   = document.getElementById('todayBadge');
+const todayReplanBtn = document.getElementById('todayReplanBtn');
+const morningOverlay = document.getElementById('morningOverlay');
+const morningList    = document.getElementById('morningList');
+const morningConfirmBtn = document.getElementById('morningConfirmBtn');
+const morningSkipBtn    = document.getElementById('morningSkipBtn');
+const morningSub        = document.getElementById('morningSub');
+
+function todayDateStr(){ return new Date().toISOString().slice(0,10); }
+
+// --- View switching ---
+function switchView(idx){
+  currentView = idx;
+  viewsSlider.style.transform = idx === 0 ? 'translateX(0)' : 'translateX(-50%)';
+  tabAll.classList.toggle('active', idx === 0);
+  tabToday.classList.toggle('active', idx === 1);
+}
+tabAll.addEventListener('click', ()=>switchView(0));
+tabToday.addEventListener('click', ()=>switchView(1));
+
+// --- Swipe gesture on views ---
+(function(){
+  const wrap = document.getElementById('viewsWrap');
+  let startX=0, startY=0, diffX=0, moved=false;
+  wrap.addEventListener('touchstart', e=>{
+    startX=e.touches[0].clientX; startY=e.touches[0].clientY; moved=false; diffX=0;
+  },{passive:true});
+  wrap.addEventListener('touchmove', e=>{
+    diffX=e.touches[0].clientX-startX;
+    const diffY=Math.abs(e.touches[0].clientY-startY);
+    if(Math.abs(diffX)>diffY) moved=true;
+  },{passive:true});
+  wrap.addEventListener('touchend', ()=>{
+    if(moved && Math.abs(diffX)>40){
+      if(diffX<0 && currentView===0) switchView(1);
+      else if(diffX>0 && currentView===1) switchView(0);
+    }
+  });
+})();
+
+// --- Heute Liste rendern ---
+function renderTodayList(todos){
+  const today = todayDateStr();
+  const email = auth.currentUser ? auth.currentUser.email : null;
+  // Nur Tasks die dieser User heute eingeplant hat (und nicht gelöscht)
+  const planned = todos.filter(t =>
+    !t.deleted &&
+    t.plannedBy === email &&
+    t.plannedDate === today
+  );
+
+  // Badge aktualisieren
+  const openCount = planned.filter(t=>!t.done).length;
+  todayBadge.textContent = openCount;
+  todayBadge.style.display = planned.length > 0 ? 'inline-block' : 'none';
+
+  todayList.innerHTML = '';
+  if(planned.length === 0){
+    todayList.innerHTML = '<div class="today-empty">Noch nichts für heute geplant.<br><br>Tippe auf <strong>📋 Neu planen</strong>.</div>';
+    return;
+  }
+
+  // Offene zuerst, dann erledigte
+  const open   = planned.filter(t=>!t.done);
+  const done   = planned.filter(t=>t.done);
+  const sorted = [...open, ...done];
+
+  sorted.forEach(todo=>{
+    const el = buildTodayItem(todo);
+    todayList.appendChild(el);
+  });
+}
+
+function buildTodayItem(todo){
+  const wrapper = document.createElement('div');
+  let cls = 'item';
+  if(todo.priority) cls += ' prio-'+todo.priority;
+  if(todo.done) cls += ' done';
+  wrapper.className = cls;
+
+  const content = document.createElement('div');
+  content.className = 'item-content';
+
+  const cb = document.createElement('div');
+  cb.className = 'checkbox' + (todo.done?' checked':'');
+  cb.onclick = e=>{ e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
+
+  const body = document.createElement('div');
+  body.className = 'item-body';
+  const textDiv = document.createElement('div');
+  textDiv.className = 'item-text'; textDiv.textContent = todo.text;
+  body.appendChild(textDiv);
+  if(todo.notes){
+    const nd = document.createElement('div');
+    nd.className = 'item-notes'; nd.textContent = todo.notes;
+    body.appendChild(nd);
+  }
+
+  const meta = document.createElement('div'); meta.className = 'meta';
+  if(todo.priority){
+    const pl=document.createElement('span'); pl.className='prio-label';
+    pl.textContent={'1':'🔴 Prio 1','2':'🟡 Prio 2','3':'🟢 Prio 3'}[todo.priority]||'';
+    meta.appendChild(pl);
+  }
+  if(todo.category){const t=document.createElement('span');t.className='tag category';t.textContent=todo.category;meta.appendChild(t);}
+  if(todo.assignee){const t=document.createElement('span');t.className='tag assignee';t.textContent=todo.assignee;meta.appendChild(t);}
+  if(todo.dueDate){
+    const db2=document.createElement('div');
+    const todayD=new Date(); todayD.setHours(0,0,0,0);
+    const due=new Date(todo.dueDate+'T00:00:00');
+    db2.className='date-badge'+(due<todayD&&!todo.done?' overdue':'');
+    db2.textContent=formatDate(todo.dueDate);
+    meta.appendChild(db2);
+  }
+  body.appendChild(meta);
+
+  // Löschen-Button (entfernt aus Heute-Liste)
+  const removeBtn = document.createElement('button');
+  removeBtn.className = 'del'; removeBtn.innerHTML = '&times;';
+  removeBtn.title = 'Aus Heute entfernen';
+  removeBtn.onclick = e=>{ e.stopPropagation(); removeFromToday(todo.id); };
+
+  content.appendChild(cb);
+  content.appendChild(body);
+  content.appendChild(removeBtn);
+  wrapper.appendChild(content);
+
+  // Long-press öffnet Edit wie gewohnt
+  addGestures(wrapper, content, todo.id);
+
+  return wrapper;
+}
+
+async function removeFromToday(id){
+  try{
+    await todosRef.doc(id).update({ plannedBy: null, plannedDate: null });
+  }catch(e){ console.error(e); }
+}
+
+// --- Morning Review ---
+function openMorningReview(isManual){
+  const today = todayDateStr();
+  const email = auth.currentUser ? auth.currentUser.email : null;
+
+  // Kandidaten: alle offenen, nicht-gelöschten Tasks
+  const candidates = currentTodos.filter(t => !t.done && !t.deleted);
+
+  // Bereits heute geplante vorauswählen
+  morningSelectedIds = new Set(
+    candidates
+      .filter(t => t.plannedBy === email && t.plannedDate === today)
+      .map(t => t.id)
+  );
+
+  // Gestrige Tasks die noch offen sind (waren gestern eingeplant, nicht erledigt)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate()-1);
+  const yesterdayStr = yesterday.toISOString().slice(0,10);
+
+  // Sortierung: Prio, dann Datum, dann Name
+  const sorted = [...candidates].sort((a,b)=>{
+    const ap=a.priority?parseInt(a.priority):99, bp=b.priority?parseInt(b.priority):99;
+    if(ap!==bp) return ap-bp;
+    if(a.dueDate&&b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+    if(a.dueDate) return -1; if(b.dueDate) return 1;
+    return 0;
+  });
+
+  const yesterdayIds = new Set(
+    candidates
+      .filter(t => t.plannedBy === email && t.plannedDate === yesterdayStr)
+      .map(t => t.id)
+  );
+
+  morningSub.textContent = isManual
+    ? 'Welche Aufgaben planst du heute?'
+    : 'Was planst du heute zu erledigen?';
+
+  morningList.innerHTML = '';
+  if(sorted.length === 0){
+    morningList.innerHTML = '<div style="text-align:center;padding:24px;color:var(--sub);font-family:Fraunces,serif;font-style:italic;">Keine offenen Aufgaben 🎉</div>';
+  } else {
+    sorted.forEach(todo=>{
+      const isFromYesterday = yesterdayIds.has(todo.id);
+      const isSelected = morningSelectedIds.has(todo.id);
+
+      const item = document.createElement('div');
+      let cls = 'morning-item';
+      if(isSelected) cls += ' selected';
+      if(isFromYesterday) cls += ' from-yesterday';
+      if(todo.priority) cls += ' prio-'+todo.priority;
+      item.className = cls;
+      item.dataset.id = todo.id;
+
+      const check = document.createElement('div');
+      check.className = 'morning-check';
+      check.textContent = isSelected ? '✓' : '';
+
+      const body = document.createElement('div');
+      body.className = 'morning-item-body';
+
+      const label = document.createElement('div');
+      label.className = 'morning-item-label';
+      label.textContent = todo.text;
+      body.appendChild(label);
+
+      const metaParts = [];
+      if(todo.category) metaParts.push(todo.category);
+      if(todo.assignee) metaParts.push(todo.assignee);
+      if(todo.dueDate) metaParts.push('📅 '+formatDate(todo.dueDate));
+      if(metaParts.length){
+        const metaEl = document.createElement('div');
+        metaEl.className = 'morning-item-meta';
+        metaEl.textContent = metaParts.join(' · ');
+        body.appendChild(metaEl);
+      }
+
+      item.appendChild(check);
+      item.appendChild(body);
+
+      item.addEventListener('click', ()=>{
+        if(morningSelectedIds.has(todo.id)){
+          morningSelectedIds.delete(todo.id);
+          item.classList.remove('selected');
+          check.textContent = '';
+        } else {
+          morningSelectedIds.add(todo.id);
+          item.classList.add('selected');
+          check.textContent = '✓';
+        }
+      });
+
+      morningList.appendChild(item);
+    });
+  }
+
+  morningOverlay.classList.remove('hidden');
+  document.body.classList.add('modal-open');
+}
+
+function closeMorningReview(){
+  morningOverlay.classList.add('hidden');
+  document.body.classList.remove('modal-open');
+}
+
+morningConfirmBtn.addEventListener('click', async ()=>{
+  const today = todayDateStr();
+  const email = auth.currentUser ? auth.currentUser.email : null;
+  if(!email){ closeMorningReview(); return; }
+
+  // Alle Tasks die bisher heute eingeplant waren, aber jetzt nicht mehr ausgewählt -> entfernen
+  const prevPlanned = currentTodos.filter(t =>
+    t.plannedBy === email && t.plannedDate === today
+  );
+
+  const batch = db.batch();
+
+  // Entfernen der Planung für nicht mehr ausgewählte
+  prevPlanned.forEach(t=>{
+    if(!morningSelectedIds.has(t.id)){
+      batch.update(todosRef.doc(t.id), { plannedBy: null, plannedDate: null });
+    }
+  });
+
+  // Setzen der Planung für neu ausgewählte
+  morningSelectedIds.forEach(id=>{
+    const existing = prevPlanned.find(t=>t.id===id);
+    if(!existing){
+      batch.update(todosRef.doc(id), { plannedBy: email, plannedDate: today });
+    }
+  });
+
+  try{ await batch.commit(); }catch(e){ console.error(e); }
+
+  closeMorningReview();
+  switchView(1); // direkt zur Heute-Ansicht
+});
+
+morningSkipBtn.addEventListener('click', ()=>{
+  closeMorningReview();
+  // Heutigen Tag als "gesehen" merken -> kein Auto-Open mehr heute
+  localStorage.setItem('morningReviewDate', todayDateStr());
+});
+
+todayReplanBtn.addEventListener('click', ()=> openMorningReview(true));
+
+// Backdrop schließt Morning Review
+morningOverlay.addEventListener('click', e=>{
+  if(e.target === morningOverlay) closeMorningReview();
+});
+
+// --- Auto Morning Review beim ersten Öffnen des Tages ---
+function checkMorningReview(){
+  const lastSeen = localStorage.getItem('morningReviewDate');
+  const today = todayDateStr();
+  if(lastSeen !== today){
+    // Kleiner Delay damit die App vollständig geladen ist
+    setTimeout(()=>{
+      openMorningReview(false);
+      localStorage.setItem('morningReviewDate', today);
+    }, 800);
+  }
+}
+
+// Morning Review nach Login
+let _morningCheckDone = false;
+
+// Patched subscribeToTodos: lädt Todos, rendert Heute-Liste und zeigt Morning Review
+function subscribeToTodosPatched(){
+  if(unsubTodos) unsubTodos();
+  unsubTodos = todosRef.onSnapshot(snap=>{
+    const todos=[]; const now=Date.now(); const week=7*86400000;
+    snap.forEach(doc=>{
+      const d=doc.data();
+      if(d.deleted&&d.deletedAt){
+        const ms=d.deletedAt.toMillis?d.deletedAt.toMillis():0;
+        if(now-ms>week){todosRef.doc(doc.id).delete().catch(()=>{});return;}
+      } else if(d.done&&d.completedAt){
+        const ms=d.completedAt.toMillis?d.completedAt.toMillis():0;
+        if(now-ms>week){todosRef.doc(doc.id).delete().catch(()=>{});return;}
+      }
+      todos.push({id:doc.id,...d});
+    });
+    currentTodos=todos;
+    render(todos);
+    // Deep Link
+    if(!window._deepLinkHandled){
+      window._deepLinkHandled=true;
+      const urlParams=new URLSearchParams(window.location.search);
+      const editId=urlParams.get('editId');
+      if(editId){
+        const target=todos.find(t=>t.id===editId);
+        if(target){ setTimeout(()=>{ openEditModal(editId); window.history.replaceState({},'',window.location.pathname); },300); }
+      }
+    }
+    // Morning Review einmalig nach erstem Laden
+    if(!_morningCheckDone){
+      _morningCheckDone = true;
+      checkMorningReview();
+    }
+  });
+}
+
 </script>
 </body>
 </html>
