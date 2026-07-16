@@ -295,6 +295,60 @@ body.dark .date-badge { color:var(--gold); }
   animation: itemGlow .8s ease forwards !important;
 }
 
+
+/* ---- Fortschrittsbalken ---- */
+.today-progress-wrap {
+  margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 5px;
+}
+.today-progress-label {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; font-weight: 700; color: var(--sub);
+}
+.today-progress-label .prog-pct { color: var(--sage); }
+.today-progress-bar {
+  height: 7px; background: var(--line); border-radius: 99px; overflow: hidden;
+}
+.today-progress-fill {
+  height: 100%; border-radius: 99px;
+  background: var(--sage);
+  transition: width .5s cubic-bezier(.4,0,.2,1), background .4s;
+}
+.today-progress-fill.complete { background: var(--sage); }
+
+/* ---- Drag Handle ---- */
+.drag-handle {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 44px; flex-shrink: 0;
+  color: var(--line); font-size: 16px; cursor: grab;
+  touch-action: none; user-select: none; -webkit-user-select: none;
+  margin-left: -6px;
+}
+.drag-handle:active { cursor: grabbing; color: var(--sub); }
+.item.dragging {
+  opacity: .45; box-shadow: 0 8px 24px rgba(0,0,0,.18);
+  transform: scale(1.02);
+}
+.item.drag-over { border-color: var(--sage) !important; }
+
+/* ---- Streak ---- */
+.celebration-streak {
+  margin-top: 10px;
+  font-family: 'Fraunces', serif; font-style: italic;
+  font-size: 15px; color: var(--clay);
+  animation: textSlideUp .45s .5s ease both;
+}
+.streak-flame { font-size: 20px; vertical-align: middle; }
+
+/* ---- Morning Review Rückblick ---- */
+.morning-recap {
+  background: rgba(107,124,99,0.1); border: 1px solid rgba(107,124,99,0.25);
+  border-radius: 10px; padding: 9px 13px; margin-bottom: 12px;
+  font-size: 13px; color: var(--sage); font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
+}
+.morning-recap-icon { font-size: 16px; }
+
 /* ---- Morning Review Modal ---- */
 .morning-overlay {
   position:fixed; inset:0; background:rgba(46,42,38,0.55);
@@ -500,6 +554,15 @@ body.modal-open { overflow:hidden; touch-action:none; }
           <div class="today-header">
             <div class="today-title">☀️ Heute</div>
             <button class="today-replan-btn" id="todayReplanBtn">📋 Neu planen</button>
+          </div>
+          <div class="today-progress-wrap hidden" id="todayProgressWrap">
+            <div class="today-progress-label">
+              <span id="todayProgressLabel">0 von 0 erledigt</span>
+              <span class="prog-pct" id="todayProgressPct">0%</span>
+            </div>
+            <div class="today-progress-bar">
+              <div class="today-progress-fill" id="todayProgressFill" style="width:0%"></div>
+            </div>
           </div>
           <div class="list" id="todayList"></div>
         </div>
@@ -1783,7 +1846,59 @@ tabToday.addEventListener('click', ()=>switchView(1));
 // --- Heute Liste rendern ---
 // Merkt ob beim letzten Render noch offene Tasks da waren
 let _todayWasAllDone = false;
+let _todayOrder = []; // persistente Reihenfolge für Drag & Drop
 
+// ── Progressbar ──────────────────────────────────────────────────────────
+const todayProgressWrap = document.getElementById('todayProgressWrap');
+const todayProgressFill = document.getElementById('todayProgressFill');
+const todayProgressLabel = document.getElementById('todayProgressLabel');
+const todayProgressPct  = document.getElementById('todayProgressPct');
+
+function updateProgressBar(planned){
+  if(!planned || planned.length === 0){
+    todayProgressWrap.classList.add('hidden');
+    return;
+  }
+  todayProgressWrap.classList.remove('hidden');
+  const doneCount = planned.filter(t=>t.done).length;
+  const pct = Math.round((doneCount / planned.length) * 100);
+  todayProgressFill.style.width = pct + '%';
+  todayProgressFill.classList.toggle('complete', pct === 100);
+  todayProgressLabel.textContent = doneCount + ' von ' + planned.length + ' erledigt';
+  todayProgressPct.textContent = pct + '%';
+}
+
+// ── Streak ───────────────────────────────────────────────────────────────
+// Streak wird in localStorage gespeichert: { count, lastDate }
+function getStreak(){ try{ return JSON.parse(localStorage.getItem('todayStreak')||'{"count":0,"lastDate":""}'); }catch(e){ return {count:0,lastDate:''}; } }
+function saveStreak(s){ localStorage.setItem('todayStreak', JSON.stringify(s)); }
+
+function updateStreak(allDoneNow){
+  const today = todayDateStr();
+  const streak = getStreak();
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+  const yesterdayStr = yesterday.toISOString().slice(0,10);
+
+  if(!allDoneNow) return streak;
+  if(streak.lastDate === today) return streak; // schon heute gezählt
+
+  if(streak.lastDate === yesterdayStr){
+    streak.count += 1;
+  } else {
+    streak.count = 1; // Reset oder erster Tag
+  }
+  streak.lastDate = today;
+  saveStreak(streak);
+  return streak;
+}
+
+function streakLabel(count){
+  if(count <= 1) return null;
+  const flames = count >= 7 ? '🔥🔥🔥' : count >= 3 ? '🔥🔥' : '🔥';
+  return flames + ' ' + count + ' Tage in Folge!';
+}
+
+// ── renderTodayList ───────────────────────────────────────────────────────
 function renderTodayList(todos){
   const today = todayDateStr();
   const email = auth.currentUser ? auth.currentUser.email : null;
@@ -1796,15 +1911,27 @@ function renderTodayList(todos){
   const openCount = planned.filter(t=>!t.done).length;
   const allDoneNow = planned.length > 0 && openCount === 0;
 
-  // Badge: zeigt offene Tasks, bei Alles-erledigt eine Trophäe
+  // Badge
   todayBadge.textContent = allDoneNow ? '🏆' : openCount;
   todayBadge.style.display = planned.length > 0 ? 'inline-block' : 'none';
 
-  // Celebration auslösen wenn gerade alle erledigt wurden (Zustandswechsel)
+  // Progressbar
+  updateProgressBar(planned);
+
+  // Celebration-Zustandswechsel
   const shouldCelebrate = allDoneNow && !_todayWasAllDone;
   _todayWasAllDone = allDoneNow;
 
+  // Streak bei Celebration updaten
+  let currentStreak = null;
+  if(shouldCelebrate){
+    currentStreak = updateStreak(true);
+  } else if(allDoneNow){
+    currentStreak = getStreak();
+  }
+
   todayList.innerHTML = '';
+
   if(planned.length === 0){
     _todayWasAllDone = false;
     todayList.innerHTML = '<div class="today-empty">Noch nichts für heute geplant.<br><br>Tippe auf <strong>📋 Neu planen</strong>.</div>';
@@ -1812,48 +1939,88 @@ function renderTodayList(todos){
   }
 
   if(allDoneNow){
-    // Celebration: alle Items anzeigen + Feier-Overlay
     const cel = document.createElement('div');
     cel.className = 'today-celebration';
-    cel.innerHTML =
+    let celHtml =
       '<div class="celebration-check">✅</div>' +
       '<div class="celebration-title">Alles geschafft!</div>' +
       '<div class="celebration-sub">Du hast heute alle geplanten Aufgaben erledigt. 💪</div>';
+    // Streak anzeigen (ab 2 Tagen)
+    if(currentStreak && currentStreak.count >= 2){
+      celHtml += '<div class="celebration-streak"><span class="streak-flame">🔥</span> ' + currentStreak.count + ' Tage in Folge – weiter so!</div>';
+    }
+    cel.innerHTML = celHtml;
     todayList.appendChild(cel);
 
-    // Tasks darunter trotzdem anzeigen (alle durchgestrichen)
     const doneSection = document.createElement('div');
-    doneSection.className = 'list';
     doneSection.style.cssText = 'display:flex;flex-direction:column;gap:10px;margin-top:16px;';
     planned.forEach(todo=>{
-      const el = buildTodayItem(todo);
+      const el = buildTodayItem(todo, false); // kein Handle im done-State
       if(shouldCelebrate) el.classList.add('today-item-done-glow');
       doneSection.appendChild(el);
     });
     todayList.appendChild(doneSection);
 
-    // Vibration als Haptic-Feedback (iOS PWA)
     if(shouldCelebrate && navigator.vibrate) navigator.vibrate([40, 60, 80]);
     return;
   }
 
-  // Normal: Offene zuerst, dann erledigte
-  const open = planned.filter(t=>!t.done);
-  const done = planned.filter(t=>t.done);
-  [...open, ...done].forEach(todo=>{
-    todayList.appendChild(buildTodayItem(todo));
+  // Reihenfolge via _todayOrder
+  const openTasks  = planned.filter(t=>!t.done);
+  const doneTasks  = planned.filter(t=>t.done);
+
+  // IDs die in _todayOrder vorkommen sortieren, neue hinten
+  const orderedOpen = [...openTasks].sort((a,b)=>{
+    const ai = _todayOrder.indexOf(a.id);
+    const bi = _todayOrder.indexOf(b.id);
+    if(ai===-1 && bi===-1) return 0;
+    if(ai===-1) return 1;
+    if(bi===-1) return -1;
+    return ai - bi;
   });
+
+  const listContainer = document.createElement('div');
+  listContainer.id = 'todayDragList';
+  listContainer.style.cssText = 'display:flex;flex-direction:column;gap:10px;';
+
+  orderedOpen.forEach(todo=>{
+    listContainer.appendChild(buildTodayItem(todo, true));
+  });
+  todayList.appendChild(listContainer);
+
+  if(doneTasks.length > 0){
+    const divider = document.createElement('div');
+    divider.style.cssText = 'font-size:11px;font-weight:700;color:var(--sub);margin:14px 0 8px;letter-spacing:.06em;text-transform:uppercase;';
+    divider.textContent = 'Erledigt';
+    todayList.appendChild(divider);
+    doneTasks.forEach(todo=>{
+      todayList.appendChild(buildTodayItem(todo, false));
+    });
+  }
+
+  initDragAndDrop(listContainer);
 }
 
-function buildTodayItem(todo){
+// ── buildTodayItem ────────────────────────────────────────────────────────
+function buildTodayItem(todo, withHandle){
   const wrapper = document.createElement('div');
   let cls = 'item';
   if(todo.priority) cls += ' prio-'+todo.priority;
   if(todo.done) cls += ' done';
   wrapper.className = cls;
+  wrapper.dataset.id = todo.id;
 
   const content = document.createElement('div');
   content.className = 'item-content';
+
+  // Drag Handle
+  if(withHandle){
+    const handle = document.createElement('div');
+    handle.className = 'drag-handle';
+    handle.innerHTML = '&#9776;';
+    handle.setAttribute('aria-label', 'Verschieben');
+    content.appendChild(handle);
+  }
 
   const cb = document.createElement('div');
   cb.className = 'checkbox' + (todo.done?' checked':'');
@@ -1888,7 +2055,6 @@ function buildTodayItem(todo){
   }
   body.appendChild(meta);
 
-  // Löschen-Button (entfernt aus Heute-Liste)
   const removeBtn = document.createElement('button');
   removeBtn.className = 'del'; removeBtn.innerHTML = '&times;';
   removeBtn.title = 'Aus Heute entfernen';
@@ -1899,10 +2065,88 @@ function buildTodayItem(todo){
   content.appendChild(removeBtn);
   wrapper.appendChild(content);
 
-  // Long-press öffnet Edit wie gewohnt
-  addGestures(wrapper, content, todo.id);
+  if(!withHandle) addGestures(wrapper, content, todo.id);
 
   return wrapper;
+}
+
+// ── Drag & Drop ───────────────────────────────────────────────────────────
+function initDragAndDrop(container){
+  let draggingEl = null;
+  let startY = 0;
+  let originalIndex = -1;
+  let placeholder = null;
+
+  function getItems(){ return [...container.querySelectorAll('.item')]; }
+
+  function getElementAtY(y){
+    const items = getItems().filter(el=>el!==draggingEl);
+    for(const item of items){
+      const rect = item.getBoundingClientRect();
+      if(y < rect.top + rect.height/2) return item;
+    }
+    return null;
+  }
+
+  container.addEventListener('touchstart', e=>{
+    const handle = e.target.closest('.drag-handle');
+    if(!handle) return;
+    e.preventDefault();
+
+    draggingEl = handle.closest('.item');
+    if(!draggingEl) return;
+
+    startY = e.touches[0].clientY;
+    originalIndex = getItems().indexOf(draggingEl);
+
+    draggingEl.classList.add('dragging');
+
+    // Placeholder
+    placeholder = document.createElement('div');
+    placeholder.style.cssText = 'height:' + draggingEl.offsetHeight + 'px;border:2px dashed var(--sage);border-radius:12px;margin:0;opacity:.5;';
+    draggingEl.parentNode.insertBefore(placeholder, draggingEl.nextSibling);
+
+  },{passive:false});
+
+  container.addEventListener('touchmove', e=>{
+    if(!draggingEl) return;
+    e.preventDefault();
+
+    const y = e.touches[0].clientY;
+    const dy = y - startY;
+
+    draggingEl.style.transform = 'translateY('+dy+'px)';
+    draggingEl.style.zIndex = '100';
+    draggingEl.style.position = 'relative';
+
+    // Placeholder verschieben
+    const target = getElementAtY(y);
+    if(target && target !== placeholder){
+      container.insertBefore(placeholder, target);
+    } else if(!target){
+      container.appendChild(placeholder);
+    }
+
+  },{passive:false});
+
+  container.addEventListener('touchend', e=>{
+    if(!draggingEl) return;
+
+    draggingEl.classList.remove('dragging');
+    draggingEl.style.transform = '';
+    draggingEl.style.zIndex = '';
+    draggingEl.style.position = '';
+
+    // An Placeholder-Position einsetzen
+    container.insertBefore(draggingEl, placeholder);
+    if(placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+
+    // Neue Reihenfolge speichern
+    _todayOrder = getItems().map(el=>el.dataset.id);
+
+    draggingEl = null;
+    placeholder = null;
+  });
 }
 
 async function removeFromToday(id){
@@ -1945,6 +2189,26 @@ function openMorningReview(isManual){
       .filter(t => t.plannedBy === email && t.plannedDate === yesterdayStr)
       .map(t => t.id)
   );
+
+  // ── Rückblick: Gestern X von Y erledigt ──
+  const yesterday2 = new Date(); yesterday2.setDate(yesterday2.getDate()-1);
+  const yesterdayStr2 = yesterday2.toISOString().slice(0,10);
+  const allTodos = currentTodos.filter(t => !t.deleted);
+  const yesterdayPlanned = allTodos.filter(t => t.plannedBy === email && t.plannedDate === yesterdayStr2);
+  const yesterdayDone = yesterdayPlanned.filter(t => t.done).length;
+  const yesterdayTotal = yesterdayPlanned.length;
+
+  // Rückblick-Zeile rendern
+  const existingRecap = document.getElementById('morningRecap');
+  if(existingRecap) existingRecap.remove();
+  if(yesterdayTotal > 0 && !isManual){
+    const recap = document.createElement('div');
+    recap.className = 'morning-recap';
+    recap.id = 'morningRecap';
+    const icon = yesterdayDone === yesterdayTotal ? '✅' : '📋';
+    recap.innerHTML = '<span class="morning-recap-icon">'+icon+'</span> Gestern: '+yesterdayDone+' von '+yesterdayTotal+' erledigt';
+    document.querySelector('.morning-modal h2').insertAdjacentElement('afterend', recap);
+  }
 
   morningSub.textContent = isManual
     ? 'Welche Aufgaben planst du heute?'
