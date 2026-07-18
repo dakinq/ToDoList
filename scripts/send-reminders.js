@@ -53,22 +53,24 @@ async function sendToTokens(tokens, title, body, todoId) {
   if (tokens.length === 0) { console.log('Keine Tokens zum Senden.'); return { successCount: 0, failureCount: 0 }; }
   console.log(`Sende an ${tokens.length} Token(s)...`);
 
+  const link = todoId
+    ? `https://dakinq.github.io/ToDoList/?editId=${todoId}`
+    : 'https://dakinq.github.io/ToDoList/';
+
+  // WICHTIG: Bewusst KEIN "notification"-Feld (weder oben noch unter "webpush")!
+  // Sobald eine FCM-Nachricht ein "notification"-Feld enthält, zeigt der Browser
+  // im Hintergrund automatisch selbst eine Notification an – zusaetzlich zu unserem
+  // eigenen showNotification()-Aufruf in onBackgroundMessage(). Das war die Ursache
+  // der doppelten Push-Benachrichtigungen. Mit einer reinen "data"-Nachricht bleibt
+  // die Anzeige komplett in unserer Hand -> jede Nachricht erscheint nur noch einmal.
   const message = {
     tokens,
-    notification: { title, body },
-    webpush: {
-      notification: {
-        title,
-        body,
-        icon: 'https://dakinq.github.io/ToDoList/icon-192.png',
-      },
-      fcm_options: {
-        // Beim Tippen auf die Notification App öffnen und direkt zur Task
-        link: todoId
-          ? `https://dakinq.github.io/ToDoList/?editId=${todoId}`
-          : 'https://dakinq.github.io/ToDoList/'
-      }
-    }
+    data: {
+      title,
+      body,
+      icon: 'https://dakinq.github.io/ToDoList/icon-192.png',
+      link,
+    },
   };
 
   const response = await messaging.sendEachForMulticast(message);
@@ -120,10 +122,11 @@ async function sendDueReminders() {
     const tokens = await getTokensExcept(null); // alle erhalten Faelligkeits-Erinnerung
 
     const body = todo.text;
+    // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
+    if (!MANUAL_RUN) await db.collection('todos').doc(todo.id).update({ notified: true });
     try {
       const res = await sendToTokens(tokens, title, body, todo.id);
       console.log(`Faelligkeits-Erinnerung "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
-      if (!MANUAL_RUN) await db.collection('todos').doc(todo.id).update({ notified: true });
     } catch (e) { console.error(`Fehler bei "${todo.text}":`, e.message); }
   }
 }
