@@ -1773,16 +1773,17 @@ if(typeof Notification !== 'undefined' && Notification.permission === 'granted' 
   }).catch(()=>{});
 }
 // Vordergrund-Handler: Notification manuell anzeigen.
-// Der leere Handler würde dazu führen, dass FCM die Notification
-// trotzdem doppelt anzeigt (einmal via SW, einmal via SDK).
-// Durch explizites showNotification hier übernehmen wir die Kontrolle
-// und der Service Worker (onBackgroundMessage) wird im Vordergrund NICHT gefeuert.
+// Server sendet bewusst NUR "data" (kein "notification"-Feld) – dadurch zeigt
+// der Browser nie automatisch selbst etwas an. So kommt jede Nachricht,
+// egal ob Vordergrund oder Hintergrund, nur genau einmal zur Anzeige.
 if(messaging) messaging.onMessage((payload)=>{
-  const title=(payload.notification&&payload.notification.title)||'Erinnerung';
+  const data=payload.data||{};
+  const title=data.title||'Erinnerung';
   const options={
-    body:(payload.notification&&payload.notification.body)||'',
-    icon:'icon-192.png',
-    badge:'icon-192.png'
+    body:data.body||'',
+    icon:data.icon||'icon-192.png',
+    badge:'icon-192.png',
+    data:{link:data.link||'/'}
   };
   if(Notification.permission==='granted'){
     navigator.serviceWorker.ready.then(reg=>{
