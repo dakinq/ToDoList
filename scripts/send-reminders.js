@@ -105,14 +105,22 @@ async function sendDueReminders() {
   const dueTodos = [];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+  // Sendefenster: 09:50–10:10 UTC (= 10:00 MESZ ± 10 Minuten)
+  const now = new Date();
+  const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  const windowStart = 9 * 60 + 50;  // 09:50 UTC
+  const windowEnd   = 10 * 60 + 10; // 10:10 UTC
+  const inSendWindow = utcMinutes >= windowStart && utcMinutes <= windowEnd;
+
   snapshot.forEach(doc => {
     const data = doc.data();
     if (!data.dueDate || data.dueDate > today) return; // nicht faellig
 
     if (!MANUAL_RUN) {
-      // Nur einschliessen wenn noch nie benachrichtigt ODER letzte Benachrichtigung > 24h her
       const lastNotified = data.notifiedAt ? data.notifiedAt.toDate() : null;
       if (lastNotified && lastNotified >= yesterday) return; // heute bereits benachrichtigt
+      // Noch nie benachrichtigt (kein notifiedAt) -> nur im Sendefenster erlaubt
+      if (!lastNotified && !inSendWindow) return;
     }
 
     dueTodos.push({ id: doc.id, ...data });
