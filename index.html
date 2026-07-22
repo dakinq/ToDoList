@@ -1422,7 +1422,7 @@ saveEditBtn.addEventListener('click',async()=>{
       text, notes:editNotesInput.value.trim()||null,
       category:editCategoryInput.value||null, assignee:editAssigneeInput.value||null,
       dueDate:editDueInput.value||null, priority:editPriorityInput.value||null,
-      recurring:editRecurringInput.value||null, notified:false,
+      recurring:editRecurringInput.value||null, notified:false, notifiedAt:null,
       photo:editPhotoBase64||null
     });
     editModal.classList.add('hidden');document.body.classList.remove('modal-open'); editingTodoId=null;
@@ -1439,7 +1439,7 @@ async function addTodo(){
     text, done:false, notes:notesInput.value.trim()||null,
     category:categoryInput.value||null, assignee:assigneeInput.value||null,
     dueDate:dueInput.value||null, priority:priorityInput.value||null,
-    recurring:recurringInput.value||null, notified:false, completedAt:null,
+    recurring:recurringInput.value||null, notified:false, notifiedAt:null, completedAt:null,
     notifiedCreation:false, notifiedCompletion:true,
     photo:newPhotoBase64||null, authorEmail:auth.currentUser.email,
     createdAt:firebase.firestore.FieldValue.serverTimestamp()
@@ -1461,7 +1461,8 @@ async function toggleTodo(id,done){
       done,
       completedAt:done?firebase.firestore.FieldValue.serverTimestamp():null,
       completedByEmail:newCompletedByEmail,
-      notifiedCompletion:done?false:true
+      notifiedCompletion:done?false:true,
+      notified:false, notifiedAt:done?undefined:null
     });
     if(done){
       // Zähler beim (Wieder-)Abschließen erhöhen
@@ -1491,7 +1492,7 @@ async function toggleTodo(id,done){
       await todosRef.add({
         text:todo.text, notes:todo.notes||null, category:todo.category||null,
         assignee:todo.assignee||null, dueDate:nd, priority:todo.priority||null,
-        recurring:todo.recurring, notified:false, completedAt:null,
+        recurring:todo.recurring, notified:false, notifiedAt:null, completedAt:null,
         photo:todo.photo||null, authorEmail:todo.authorEmail||null,
         done:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()
       });
