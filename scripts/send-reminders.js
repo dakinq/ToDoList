@@ -99,14 +99,23 @@ async function sendToTokens(tokens, title, body, todoId) {
 // ---- 1. Erinnerungen fuer faellige To-dos ----
 async function sendDueReminders() {
   const today = todayDateString();
-  let query = db.collection('todos').where('done', '==', false);
-  if (!MANUAL_RUN) query = query.where('notified', '==', false);
-  const snapshot = await query.get();
+  // Alle offenen Todos holen (kein notified-Filter mehr, da wir jetzt per Timestamp pruefen)
+  const snapshot = await db.collection('todos').where('done', '==', false).get();
 
   const dueTodos = [];
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
   snapshot.forEach(doc => {
     const data = doc.data();
-    if (data.dueDate && data.dueDate <= today) dueTodos.push({ id: doc.id, ...data });
+    if (!data.dueDate || data.dueDate > today) return; // nicht faellig
+
+    if (!MANUAL_RUN) {
+      // Nur einschliessen wenn noch nie benachrichtigt ODER letzte Benachrichtigung > 24h her
+      const lastNotified = data.notifiedAt ? data.notifiedAt.toDate() : null;
+      if (lastNotified && lastNotified >= yesterday) return; // heute bereits benachrichtigt
+    }
+
+    dueTodos.push({ id: doc.id, ...data });
   });
 
   if (dueTodos.length === 0) { console.log('Keine faelligen To-dos.'); return; }
@@ -116,14 +125,13 @@ async function sendDueReminders() {
     const isOverdue = todo.dueDate < today;
     const title = isOverdue ? '\u26a0\ufe0f \u00dcberf\u00e4llig' : '\ud83d\udcc5 Heute f\u00e4llig';
 
-    // Nur an zugewiesene Person(en) senden
-    // assignee ist ein einzelner Name (kein Email) – wir senden an alle wenn kein assignee gesetzt
-    // oder an alle wenn wir keinen Email-Match machen koennen
     const tokens = await getTokensExcept(null); // alle erhalten Faelligkeits-Erinnerung
 
     const body = todo.text;
-    // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
-    if (!MANUAL_RUN) await db.collection('todos').doc(todo.id).update({ notified: true });
+    // Timestamp setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
+    if (!MANUAL_RUN) await db.collection('todos').doc(todo.id).update({
+      notifiedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
     try {
       const res = await sendToTokens(tokens, title, body, todo.id);
       console.log(`Faelligkeits-Erinnerung "${todo.text}": ${res.successCount} ok, ${res.failureCount} fehlgeschlagen`);
