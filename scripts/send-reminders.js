@@ -154,6 +154,12 @@ async function sendCreationNotifications() {
 
   for (const doc of snapshot.docs) {
     const todo = doc.data();
+    // Geloeschte Tasks nicht melden – aber Flag trotzdem setzen damit sie nicht
+    // beim naechsten Lauf wieder auftauchen.
+    if (todo.deleted) {
+      await doc.ref.update({ notifiedCreation: true });
+      continue;
+    }
     // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
     await doc.ref.update({ notifiedCreation: true });
     const tokens = await getTokensExcept(todo.authorEmail || null);
@@ -173,9 +179,15 @@ async function sendCompletionNotifications() {
 
   for (const doc of snapshot.docs) {
     const todo = doc.data();
+    // Erst pruefen ob der Task wirklich erledigt ist, bevor das Flag gesetzt wird.
+    // Sonst wuerde das Flag auf true gesetzt und die Benachrichtigung dann uebersprungen –
+    // beim naechsten Abschliessen kaeme dann nie mehr eine Push-Meldung.
+    if (!todo.done) {
+      await doc.ref.update({ notifiedCompletion: true });
+      continue;
+    }
     // Sofort auf true setzen bevor gesendet wird – verhindert Doppel-Push bei parallelen Laeufen
     await doc.ref.update({ notifiedCompletion: true });
-    if (!todo.done) { continue; }
     const tokens = await getTokensExcept(todo.completedByEmail || null);
     const title = 'Erledigt ✓';
     const body = todo.text;
