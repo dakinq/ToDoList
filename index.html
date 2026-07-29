@@ -1115,7 +1115,8 @@ async function recordCompletion(done,targetEmail){
 // ---- Todos ----
 function subscribeToTodos(){
   if(unsubTodos) unsubTodos();
-  unsubTodos=todosRef.onSnapshot(snap=>{
+  unsubTodos=todosRef.onSnapshot({includeMetadataChanges:true}, snap=>{
+    if(snap.metadata.fromCache || snap.metadata.hasPendingWrites) return;
     const todos=[]; const now=Date.now(); const week=7*86400000;
     snap.forEach(doc=>{
       const d=doc.data();
