@@ -1201,8 +1201,26 @@ function render(todos){
 
     const cb=document.createElement('div');
     cb.className='checkbox'+(todo.done?' checked':'');
-    cb.onclick=e=>{e.stopPropagation();if(!todo.deleted)toggleTodo(todo.id,!todo.done);};
-    cb.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();if(!todo.deleted)toggleTodo(todo.id,!todo.done);},{passive:false});
+    const handleToggle = e => {
+      e.stopPropagation();
+      if(todo.deleted) return;
+      const newDone = !todo.done;
+      // Sofort visuell abhaken
+      cb.className = 'checkbox' + (newDone ? ' checked' : '');
+      cb.style.animation = newDone ? 'checkPop .35s cubic-bezier(.36,.07,.19,.97) forwards' : '';
+      if(newDone){
+        wrapper.style.animation = 'itemGlow .6s ease forwards';
+        // Item nach kurzer Zeit ausblenden
+        setTimeout(()=>{
+          wrapper.style.transition = 'opacity .4s ease, transform .4s ease';
+          wrapper.style.opacity = '0';
+          wrapper.style.transform = 'translateX(10px)';
+        }, 600);
+      }
+      toggleTodo(todo.id, newDone);
+    };
+    cb.onclick = handleToggle;
+    cb.addEventListener('touchend', e=>{ e.preventDefault(); handleToggle(e); }, {passive:false});
     if(todo.deleted) cb.style.visibility='hidden';
 
     const body=document.createElement('div');
