@@ -3,121 +3,152 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Touch Debug</title>
+<title>Toggle Debug</title>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, sans-serif; background: #f0ede8; padding: 20px; }
-
-.item {
-  position: relative;
-  border-radius: 12px;
-  border: 1px solid #ddd;
-  overflow: hidden;
-  background: white;
-  margin-bottom: 16px;
-}
-.item-content {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  user-select: none;
-  -webkit-user-select: none;
-}
-.checkbox {
-  width: 22px; height: 22px;
-  border-radius: 50%;
-  border: 2px solid #7a9e7e;
-  flex-shrink: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 2px;
-  background: white;
-}
-.checkbox.checked { background: #7a9e7e; }
-.checkbox.checked::after { content: '✓'; color: white; font-size: 13px; font-weight: bold; }
-.item-text { font-size: 16px; padding-top: 2px; }
-
-.log {
-  background: #1a1a22;
-  border-radius: 12px;
-  padding: 14px;
-  font-family: monospace;
-  font-size: 12px;
-  color: #aaa;
-  max-height: 400px;
-  overflow-y: auto;
-  line-height: 1.8;
-}
-.ok   { color: #4ade80; }
-.warn { color: #facc15; }
-.err  { color: #f87171; }
-.info { color: #60a5fa; }
-h2 { font-size: 14px; color: #555; margin-bottom: 8px; margin-top: 16px; }
-button.clear { background: #333; color: #aaa; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; margin-top: 8px; cursor: pointer; }
+.item { position:relative; border-radius:12px; border:1px solid #ddd; overflow:hidden; background:white; margin-bottom:16px; }
+.item-content { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; user-select:none; -webkit-user-select:none; }
+.checkbox { width:22px; height:22px; border-radius:50%; border:2px solid #7a9e7e; flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:2px; background:white; transition:background .15s; }
+.checkbox.checked { background:#7a9e7e; }
+.checkbox.checked::after { content:'✓'; color:white; font-size:13px; font-weight:bold; }
+.item-text { font-size:15px; padding-top:2px; flex:1; }
+.log { background:#1a1a22; border-radius:12px; padding:14px; font-family:monospace; font-size:12px; color:#aaa; max-height:50vh; overflow-y:auto; line-height:1.8; white-space:pre-wrap; word-break:break-all; }
+.ok   { color:#4ade80; } .warn { color:#facc15; } .err { color:#f87171; } .info { color:#60a5fa; }
+h2 { font-size:13px; color:#666; margin:14px 0 6px; text-transform:uppercase; letter-spacing:.5px; }
+#loginSection { background:white; border-radius:12px; padding:16px; margin-bottom:16px; }
+input { width:100%; border:1px solid #ddd; border-radius:8px; padding:10px; font-size:15px; margin-bottom:8px; }
+button { width:100%; background:#5b5bf6; color:white; border:none; border-radius:8px; padding:12px; font-size:15px; font-weight:600; cursor:pointer; margin-bottom:8px; }
+.btn-clear { background:#333; color:#aaa; }
 </style>
 </head>
 <body>
 
-<h2>Test-Item – tippe auf den Kreis links</h2>
-
-<div class="item" id="wrapper">
-  <div class="item-content" id="content">
-    <div class="checkbox" id="cb"></div>
-    <div class="item-text">Tippe auf den Kreis zum Abhaken</div>
-  </div>
+<div id="loginSection">
+  <h2>Anmelden</h2>
+  <input type="email" id="emailIn" placeholder="E-Mail">
+  <input type="password" id="passwordIn" placeholder="Passwort">
+  <button onclick="doLogin()">Anmelden</button>
+  <div id="loginErr" style="color:#f87171;font-size:13px;"></div>
 </div>
 
-<h2>Live Log</h2>
-<div class="log" id="log">Warte auf Touch…</div>
-<button class="clear" onclick="document.getElementById('log').innerHTML='Log geleert.'">Log leeren</button>
+<div id="mainSection" style="display:none">
+  <h2>Test-Todo aus Firestore</h2>
+  <div class="item" id="wrapper">
+    <div class="item-content">
+      <div class="checkbox" id="cb"></div>
+      <div class="item-text" id="todoText">Lade Todo…</div>
+    </div>
+  </div>
+
+  <h2>Log</h2>
+  <div class="log" id="log">Bereit.</div>
+  <button class="btn-clear" onclick="document.getElementById('log').innerHTML='Log geleert.'">Log leeren</button>
+</div>
 
 <script>
-let done = false;
+firebase.initializeApp({
+  apiKey: "AIzaSyDfTQHSnhdX5-Z-3MCeDPpDeKXcuEbV1zE",
+  authDomain: "todoliste-badfd.firebaseapp.com",
+  projectId: "todoliste-badfd",
+  storageBucket: "todoliste-badfd.firebasestorage.app",
+  messagingSenderId: "764723309146",
+  appId: "1:764723309146:web:75a7f9c88264a967c30663"
+});
+
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+let testTodo = null;
 
 function log(type, msg) {
   const el = document.getElementById('log');
-  const t = new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const t  = new Date().toLocaleTimeString('de-DE');
   el.innerHTML += `\n<span class="${type}">[${t}] ${msg}</span>`;
   el.scrollTop = el.scrollHeight;
 }
 
-const wrapper = document.getElementById('wrapper');
-const cb      = document.getElementById('cb');
+async function doLogin() {
+  try {
+    await auth.signInWithEmailAndPassword(
+      document.getElementById('emailIn').value.trim(),
+      document.getElementById('passwordIn').value
+    );
+  } catch(e) {
+    document.getElementById('loginErr').textContent = e.message;
+  }
+}
 
-// ── Checkbox Events ──────────────────────────────────────────
-cb.addEventListener('touchstart', e => {
-  log('info', 'CB touchstart – target: ' + e.target.id);
-}, {passive: true});
-
-cb.addEventListener('touchend', e => {
-  log('ok', 'CB touchend – target: ' + e.target.id);
-  done = !done;
-  cb.className = 'checkbox' + (done ? ' checked' : '');
-  log('ok', '→ toggleTodo() wäre hier aufgerufen worden. done=' + done);
+auth.onAuthStateChanged(async user => {
+  if (!user) return;
+  document.getElementById('loginSection').style.display = 'none';
+  document.getElementById('mainSection').style.display  = 'block';
+  log('ok', 'Angemeldet: ' + user.email);
+  await loadTestTodo();
 });
 
-cb.addEventListener('click', e => {
-  log('warn', 'CB click (nach touchend) – stopPropagation läuft');
-  e.stopPropagation();
-});
+async function loadTestTodo() {
+  log('info', 'Lade erstes offenes Todo aus Firestore…');
+  try {
+    const snap = await db.collection('todos')
+      .where('done', '==', false)
+      .where('deleted', '==', false)
+      .limit(1).get();
 
-// ── Wrapper Events ───────────────────────────────────────────
-wrapper.addEventListener('touchstart', e => {
-  const onCb = e.target.closest('#cb');
-  log(onCb ? 'warn' : 'info',
-    'WRAPPER touchstart – target: ' + e.target.id + (onCb ? ' [trifft Checkbox!]' : ''));
-}, {passive: true});
+    if (snap.empty) {
+      // Fallback: ohne deleted-Filter
+      const snap2 = await db.collection('todos').where('done','==',false).limit(1).get();
+      if (snap2.empty) { log('err', 'Keine offenen Todos gefunden!'); return; }
+      snap2.forEach(doc => { testTodo = { id: doc.id, ...doc.data() }; });
+    } else {
+      snap.forEach(doc => { testTodo = { id: doc.id, ...doc.data() }; });
+    }
 
-wrapper.addEventListener('touchend', e => {
-  log('info', 'WRAPPER touchend');
-});
+    log('ok', 'Todo geladen: "' + testTodo.text + '" (ID: ' + testTodo.id + ')');
+    log('info', 'done=' + testTodo.done + ', deleted=' + testTodo.deleted);
+    document.getElementById('todoText').textContent = testTodo.text;
+    const cb = document.getElementById('cb');
+    cb.className = 'checkbox' + (testTodo.done ? ' checked' : '');
+    setupCheckbox();
+  } catch(e) {
+    log('err', 'Fehler beim Laden: ' + e.message);
+  }
+}
 
-wrapper.addEventListener('click', e => {
-  log('err', 'WRAPPER click – würde Modal öffnen! target: ' + e.target.id);
-});
+function setupCheckbox() {
+  const cb = document.getElementById('cb');
+
+  cb.onclick = async e => {
+    e.stopPropagation();
+    log('info', 'onclick gefeuert');
+    await doToggle();
+  };
+}
+
+async function doToggle() {
+  if (!testTodo) { log('err', 'Kein Todo geladen!'); return; }
+
+  const newDone = !testTodo.done;
+  log('info', 'Versuche toggleTodo: done=' + testTodo.done + ' → ' + newDone);
+
+  try {
+    log('info', 'Schreibe in Firestore…');
+    await db.collection('todos').doc(testTodo.id).update({
+      done: newDone,
+      completedAt: newDone ? firebase.firestore.FieldValue.serverTimestamp() : null,
+    });
+    testTodo.done = newDone;
+    const cb = document.getElementById('cb');
+    cb.className = 'checkbox' + (newDone ? ' checked' : '');
+    log('ok', '✓ Firestore Update erfolgreich! done=' + newDone);
+  } catch(e) {
+    log('err', 'Firestore Fehler: ' + e.message);
+    log('err', 'Code: ' + e.code);
+  }
+}
 </script>
 </body>
 </html>
