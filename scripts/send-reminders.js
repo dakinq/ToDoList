@@ -200,7 +200,8 @@ async function sendCompletionNotifications() {
 
 async function main() {
   await deleteOldCompleted();
-  await sendDueReminders();
+  if (!MANUAL_RUN) await sendDueReminders();
+  else console.log("Manueller Lauf: Faelligkeits-Erinnerungen werden uebersprungen.");
   await sendCreationNotifications();
   await sendCompletionNotifications();
 }
