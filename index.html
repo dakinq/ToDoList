@@ -1202,7 +1202,6 @@ function render(todos){
     const cb=document.createElement('div');
     cb.className='checkbox'+(todo.done?' checked':'');
     cb.onclick=e=>{e.stopPropagation();if(!todo.deleted)toggleTodo(todo.id,!todo.done);};
-    cb.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();if(!todo.deleted)toggleTodo(todo.id,!todo.done);},{passive:false});
     if(todo.deleted) cb.style.visibility='hidden';
 
     const body=document.createElement('div');
@@ -1383,6 +1382,7 @@ function addGestures(wrapper,content,todoId){
   }
 
   wrapper.addEventListener('touchstart',e=>{
+    if(e.target.closest('.checkbox')) return;
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; moved=false;
     startPress();
     longTimer=setTimeout(()=>{ if(!moved) firePress(); },600);
@@ -2029,7 +2029,6 @@ function buildTodayItem(todo, withHandle){
   const cb = document.createElement('div');
   cb.className = 'checkbox' + (todo.done?' checked':'');
   cb.onclick = e=>{ e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
-  cb.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();toggleTodo(todo.id,!todo.done);},{passive:false});
 
   const body = document.createElement('div');
   body.className = 'item-body';
