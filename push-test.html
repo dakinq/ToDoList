@@ -28,7 +28,7 @@ h1 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
 .status-row { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 8px; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dot.green  { background: #4ade80; box-shadow: 0 0 6px #4ade8066; }
-.dot.yellow { background: #facc15; box-shadow: 0 0 6px #facc1566; }
+.dot.yellow { background: #facc15; }
 .dot.red    { background: #f87171; box-shadow: 0 0 6px #f8717166; }
 .dot.grey   { background: #444; }
 input[type="text"], input[type="email"], input[type="password"] {
@@ -37,6 +37,12 @@ input[type="text"], input[type="email"], input[type="password"] {
   padding: 11px 13px; margin-bottom: 10px; outline: none;
 }
 input:focus { border-color: #5b5bf6; }
+select {
+  width: 100%; background: #111118; border: 1px solid #2a2a36;
+  border-radius: 8px; color: #e8e8f0; font-size: 15px;
+  padding: 11px 13px; margin-bottom: 10px; outline: none; cursor: pointer;
+}
+select:focus { border-color: #5b5bf6; }
 button {
   width: 100%; padding: 13px; border-radius: 10px; border: none;
   font-size: 15px; font-weight: 600; cursor: pointer;
@@ -72,10 +78,16 @@ button:disabled { opacity: 0.3; cursor: not-allowed; }
 .step-num.done   { background: #16a34a; color: #fff; }
 .step-text { font-size: 13px; color: #aaa; line-height: 1.5; }
 .step-text strong { color: #e8e8f0; display: block; margin-bottom: 2px; }
+.hint { font-size: 12px; color: #555; margin-bottom: 10px; line-height: 1.6; }
+.author-preview {
+  background: #111118; border: 1px solid #2a2a36; border-radius: 8px;
+  padding: 10px 13px; font-size: 13px; color: #888; margin-bottom: 10px;
+  line-height: 1.5;
+}
+.author-preview span { color: #facc15; font-weight: 600; }
+a { color: #5b5bf6; }
 #loginSection { display: block; }
 #mainSection  { display: none; }
-.hint { font-size: 12px; color: #555; margin-bottom: 10px; line-height: 1.5; }
-a { color: #5b5bf6; }
 </style>
 </head>
 <body>
@@ -104,15 +116,14 @@ a { color: #5b5bf6; }
     <div class="status-row"><div class="dot grey" id="dotTokens"></div><span id="statusTokens">Tokens werden geladen…</span></div>
   </div>
 
-  <!-- Schritt 1: GitHub Token -->
+  <!-- GitHub Token -->
   <div class="card">
-    <div class="card-title">Schritt 1 – GitHub Token</div>
+    <div class="card-title">GitHub Token</div>
     <p class="hint">
-      Erstelle einen Token unter:<br>
-      <a href="https://github.com/settings/tokens/new?scopes=workflow&description=PushTest" target="_blank">
-        github.com → Settings → Developer settings → Personal access tokens → Generate
-      </a><br><br>
-      Nur <strong>workflow</strong> anhaken. Token wird nicht gespeichert.
+      Erstelle einen Token unter:
+      <a href="https://github.com/settings/tokens/new?scopes=repo,workflow&description=PushTest" target="_blank">
+        github.com → Settings → Developer settings → Personal access tokens
+      </a> – <strong>repo</strong> und <strong>workflow</strong> anhaken.
     </p>
     <input type="text" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
     <button class="btn-ghost" onclick="verifyGhToken()">Token prüfen</button>
@@ -122,11 +133,23 @@ a { color: #5b5bf6; }
     </div>
   </div>
 
-  <!-- Schritt 2: Test -->
+  <!-- Test -->
   <div class="card">
-    <div class="card-title">Schritt 2 – Test starten</div>
-    <p class="hint">Legt einen Eintrag mit <code style="color:#aaa">notifiedCreation: false</code> an und triggert sofort den GitHub Actions Workflow. Schau dann auf dein iPhone.</p>
-    <input type="text" id="newTodoText" placeholder="Test-Text (z.B. 'Push Test 1')">
+    <div class="card-title">Test starten</div>
+
+    <label style="font-size:12px;color:#555;display:block;margin-bottom:6px;">TEST-TEXT</label>
+    <input type="text" id="newTodoText" placeholder="z.B. 'Push Test'">
+
+    <label style="font-size:12px;color:#555;display:block;margin-bottom:6px;">AUTOR SIMULIEREN</label>
+    <p class="hint">Das Script sendet die Push an alle <em>ausser</em> dem Autor. Wähle hier einen anderen Nutzer als Autor, damit du die Push bekommst.</p>
+    <select id="authorSelect" onchange="updateAuthorPreview()">
+      <option value="__self__">Ich selbst (kein Push für mich)</option>
+    </select>
+
+    <div class="author-preview" id="authorPreview">
+      Push geht an: <span>niemanden</span>
+    </div>
+
     <button class="btn-green" id="btnTest" onclick="runTest()" disabled>
       🚀 Eintrag anlegen + Workflow starten
     </button>
@@ -137,15 +160,15 @@ a { color: #5b5bf6; }
     <div class="card-title">Fortschritt</div>
     <div class="step">
       <div class="step-num" id="s1num">1</div>
-      <div class="step-text"><strong>Eintrag anlegen</strong><span id="s1txt">Warten…</span></div>
+      <div class="step-text"><strong>Eintrag anlegen</strong><span id="s1txt"> Warten…</span></div>
     </div>
     <div class="step">
       <div class="step-num" id="s2num">2</div>
-      <div class="step-text"><strong>Workflow triggern</strong><span id="s2txt">Warten…</span></div>
+      <div class="step-text"><strong>Workflow triggern</strong><span id="s2txt"> Warten…</span></div>
     </div>
     <div class="step">
       <div class="step-num" id="s3num">3</div>
-      <div class="step-text"><strong>Push auf iPhone</strong><span id="s3txt">Kommt in ~30–60 Sekunden</span></div>
+      <div class="step-text"><strong>Push auf iPhone</strong><span id="s3txt"> Kommt in ~30–60 Sekunden</span></div>
     </div>
   </div>
 
@@ -176,9 +199,9 @@ const GH_OWNER    = 'dakinq';
 const GH_REPO     = 'ToDoList';
 const GH_WORKFLOW = 'reminders.yml';
 
-let currentUser = null;
-let tokenCount  = 0;
-let ghTokenOk   = false;
+let currentUser  = null;
+let allTokenData = []; // [{email, token}]
+let ghTokenOk    = false;
 
 // ── Logging ──────────────────────────────────────────────────
 function log(type, msg) {
@@ -187,19 +210,13 @@ function log(type, msg) {
   el.innerHTML += `\n<span class="${type}">[${t}] ${msg}</span>`;
   el.scrollTop  = el.scrollHeight;
 }
-
-function setDot(id, color) {
-  document.getElementById(id).className = 'dot ' + color;
-}
-
+function setDot(id, color) { document.getElementById(id).className = 'dot ' + color; }
 function setStep(n, state, txt) {
   const num = document.getElementById('s' + n + 'num');
   const tx  = document.getElementById('s' + n + 'txt');
   num.className = 'step-num ' + state;
-  if (state === 'done')   num.textContent = '✓';
-  else if (state === 'active') num.textContent = '…';
-  else num.textContent = n;
-  if (txt) tx.textContent = txt;
+  num.textContent = state === 'done' ? '✓' : state === 'active' ? '…' : n;
+  if (txt !== undefined) tx.textContent = ' ' + txt;
 }
 
 // ── Auth ─────────────────────────────────────────────────────
@@ -207,13 +224,9 @@ async function doLogin() {
   const email = document.getElementById('emailIn').value.trim();
   const pass  = document.getElementById('passwordIn').value;
   document.getElementById('loginErr').textContent = '';
-  try {
-    await auth.signInWithEmailAndPassword(email, pass);
-  } catch(e) {
-    document.getElementById('loginErr').textContent = e.message;
-  }
+  try { await auth.signInWithEmailAndPassword(email, pass); }
+  catch(e) { document.getElementById('loginErr').textContent = e.message; }
 }
-
 function doLogout() { auth.signOut(); }
 
 auth.onAuthStateChanged(async user => {
@@ -231,29 +244,67 @@ auth.onAuthStateChanged(async user => {
   }
 });
 
-// ── Tokens aus Firestore laden ────────────────────────────────
+// ── Tokens laden + Autor-Dropdown befüllen ────────────────────
 async function loadTokens() {
   try {
     const snap = await db.collection('tokens').get();
-    tokenCount = snap.size;
-    if (tokenCount > 0) {
+    allTokenData = [];
+    const emailsSeen = new Set();
+
+    snap.forEach(doc => {
+      const d = doc.data();
+      allTokenData.push({ email: d.email || null, token: d.token });
+      if (d.email) emailsSeen.add(d.email);
+    });
+
+    if (allTokenData.length > 0) {
       setDot('dotTokens', 'green');
       document.getElementById('statusTokens').textContent =
-        tokenCount + ' Gerät(e) registriert – Push kann gesendet werden ✓';
-      log('ok', tokenCount + ' Token(s) in Firestore gefunden.');
-      snap.forEach(doc => {
-        const d = doc.data();
-        log('info', '  → ' + (d.email || 'unbekannt') + ' | Token: ' + (d.token||'').slice(0,20) + '…');
-      });
+        allTokenData.length + ' Token(s) – ' + emailsSeen.size + ' Nutzer registriert ✓';
+      log('ok', allTokenData.length + ' Token(s) gefunden.');
+      allTokenData.forEach(t =>
+        log('info', '  → ' + (t.email || 'unbekannt') + ' | ' + t.token.slice(0,20) + '…')
+      );
     } else {
       setDot('dotTokens', 'red');
-      document.getElementById('statusTokens').textContent =
-        'Keine Tokens – öffne erst die Haupt-App auf dem iPhone';
-      log('warn', 'Keine Tokens in Firestore. Push kann nicht zugestellt werden.');
+      document.getElementById('statusTokens').textContent = 'Keine Tokens gefunden.';
     }
+
+    // Dropdown befüllen: alle anderen Nutzer (nicht ich selbst)
+    const select = document.getElementById('authorSelect');
+    select.innerHTML = '<option value="__self__">Ich selbst (kein Push für mich)</option>';
+    const others = [...emailsSeen].filter(e => e !== currentUser?.email);
+    others.forEach(email => {
+      const opt = document.createElement('option');
+      opt.value = email;
+      opt.textContent = email + ' (Push geht an alle anderen)';
+      select.appendChild(opt);
+    });
+
+    updateAuthorPreview();
     checkReady();
   } catch(e) {
-    log('err', 'Tokens laden fehlgeschlagen: ' + e.message);
+    log('err', 'Tokens laden: ' + e.message);
+  }
+}
+
+// ── Autor-Vorschau aktualisieren ──────────────────────────────
+function updateAuthorPreview() {
+  const select     = document.getElementById('authorSelect');
+  const authorEmail = select.value === '__self__' ? currentUser?.email : select.value;
+  const preview    = document.getElementById('authorPreview');
+
+  // Wer bekommt die Push?
+  const recipients = allTokenData
+    .filter(t => t.email !== authorEmail)
+    .map(t => t.email || 'unbekannt');
+
+  const unique = [...new Set(recipients)];
+
+  if (unique.length === 0) {
+    preview.innerHTML = 'Push geht an: <span style="color:#f87171">niemanden</span> – wähle einen anderen Autor!';
+  } else {
+    preview.innerHTML = 'Push geht an: <span>' + unique.join(', ') + '</span>';
   }
 }
 
@@ -261,7 +312,6 @@ async function loadTokens() {
 async function verifyGhToken() {
   const token = document.getElementById('ghToken').value.trim();
   if (!token) { log('warn', 'Bitte GitHub Token eingeben.'); return; }
-
   log('info', 'Prüfe GitHub Token…');
   try {
     const res = await fetch(
@@ -272,60 +322,58 @@ async function verifyGhToken() {
       const data = await res.json();
       ghTokenOk = true;
       setDot('dotGh', 'green');
-      document.getElementById('statusGh').textContent = 'Token gültig ✓ – Workflow: ' + data.name;
-      log('ok', 'GitHub Token gültig. Workflow gefunden: ' + data.name);
+      document.getElementById('statusGh').textContent = 'Token gültig ✓ – ' + data.name;
+      log('ok', 'GitHub Token gültig.');
       checkReady();
     } else {
       ghTokenOk = false;
       setDot('dotGh', 'red');
-      document.getElementById('statusGh').textContent = 'Fehler: ' + res.status + ' – Token ungültig oder keine workflow-Berechtigung';
+      document.getElementById('statusGh').textContent = 'Fehler ' + res.status + ' – repo + workflow Berechtigung nötig';
       log('err', 'GitHub Token Fehler: ' + res.status);
     }
-  } catch(e) {
-    log('err', 'GitHub API nicht erreichbar: ' + e.message);
-  }
+  } catch(e) { log('err', 'GitHub API: ' + e.message); }
 }
 
 function checkReady() {
-  const ok = ghTokenOk && tokenCount > 0 && currentUser;
-  document.getElementById('btnTest').disabled = !ok;
+  document.getElementById('btnTest').disabled = !(ghTokenOk && allTokenData.length > 0 && currentUser);
 }
 
-// ── Test: Eintrag anlegen + Workflow triggern ─────────────────
+// ── Test ──────────────────────────────────────────────────────
 async function runTest() {
   const text  = document.getElementById('newTodoText').value.trim() || 'Push Test';
   const token = document.getElementById('ghToken').value.trim();
+  const select = document.getElementById('authorSelect');
+  const authorEmail = select.value === '__self__' ? currentUser?.email : select.value;
+
   if (!currentUser || !token) return;
 
   document.getElementById('progressCard').style.display = 'block';
   document.getElementById('btnTest').disabled = true;
 
-  // Schritt 1: Eintrag anlegen
+  // Schritt 1
   setStep(1, 'active');
-  log('info', 'Lege Eintrag an: "' + text + '"');
+  log('info', `Lege Eintrag an: "${text}" (Autor: ${authorEmail})`);
   try {
     const doc = await todosRef.add({
-      text,
-      done: false,
+      text, done: false,
       notes: null, category: null, assignee: null,
       dueDate: null, priority: null, recurring: null,
       notified: false, notifiedAt: null, completedAt: null,
-      notifiedCreation: false,
-      notifiedCompletion: true,
+      notifiedCreation: false, notifiedCompletion: true,
       photo: null,
-      authorEmail: currentUser.email,
+      authorEmail: authorEmail,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
-    setStep(1, 'done', 'Angelegt (ID: ' + doc.id.slice(0,8) + '…)');
+    setStep(1, 'done', `Angelegt (ID: ${doc.id.slice(0,8)}…)`);
     log('ok', 'Eintrag angelegt: ' + doc.id);
   } catch(e) {
     setStep(1, '', 'Fehler: ' + e.message);
-    log('err', 'Eintrag-Fehler: ' + e.message);
+    log('err', e.message);
     document.getElementById('btnTest').disabled = false;
     return;
   }
 
-  // Schritt 2: Workflow triggern
+  // Schritt 2
   setStep(2, 'active');
   log('info', 'Triggere GitHub Actions Workflow…');
   try {
@@ -343,24 +391,19 @@ async function runTest() {
     );
     if (res.status === 204) {
       setStep(2, 'done', 'Workflow gestartet ✓');
-      log('ok', 'Workflow erfolgreich getriggert (HTTP 204).');
-      setStep(3, 'active', 'Schau jetzt auf dein iPhone – kommt in ~30–60 Sek.');
-      log('info', 'Warte auf Push auf dem iPhone…');
-
-      // Nach 90 Sek Hinweis
+      log('ok', 'Workflow getriggert.');
+      setStep(3, 'active', 'Schau auf dein iPhone – kommt in ~30–60 Sek.');
       setTimeout(() => {
-        log('warn', 'Noch keine Push? Prüfe GitHub Actions unter: https://github.com/' + GH_OWNER + '/' + GH_REPO + '/actions');
-        setStep(3, '', 'Nichts? → GitHub Actions Log prüfen');
+        log('warn', 'Noch keine Push? → https://github.com/' + GH_OWNER + '/' + GH_REPO + '/actions');
       }, 90000);
-
     } else {
       const body = await res.text();
       setStep(2, '', 'Fehler HTTP ' + res.status);
-      log('err', 'Workflow-Fehler ' + res.status + ': ' + body);
+      log('err', 'Workflow ' + res.status + ': ' + body);
     }
   } catch(e) {
     setStep(2, '', 'Fehler: ' + e.message);
-    log('err', 'Workflow-Trigger Fehler: ' + e.message);
+    log('err', e.message);
   }
 
   document.getElementById('btnTest').disabled = false;
