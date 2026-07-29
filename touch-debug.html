@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Touch Debug</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, sans-serif; background: #f0ede8; padding: 20px; }
+
+.item {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid #ddd;
+  overflow: hidden;
+  background: white;
+  margin-bottom: 16px;
+}
+.item-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.checkbox {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 2px solid #7a9e7e;
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+  background: white;
+}
+.checkbox.checked { background: #7a9e7e; }
+.checkbox.checked::after { content: '✓'; color: white; font-size: 13px; font-weight: bold; }
+.item-text { font-size: 16px; padding-top: 2px; }
+
+.log {
+  background: #1a1a22;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: monospace;
+  font-size: 12px;
+  color: #aaa;
+  max-height: 400px;
+  overflow-y: auto;
+  line-height: 1.8;
+}
+.ok   { color: #4ade80; }
+.warn { color: #facc15; }
+.err  { color: #f87171; }
+.info { color: #60a5fa; }
+h2 { font-size: 14px; color: #555; margin-bottom: 8px; margin-top: 16px; }
+button.clear { background: #333; color: #aaa; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; margin-top: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<h2>Test-Item – tippe auf den Kreis links</h2>
+
+<div class="item" id="wrapper">
+  <div class="item-content" id="content">
+    <div class="checkbox" id="cb"></div>
+    <div class="item-text">Tippe auf den Kreis zum Abhaken</div>
+  </div>
+</div>
+
+<h2>Live Log</h2>
+<div class="log" id="log">Warte auf Touch…</div>
+<button class="clear" onclick="document.getElementById('log').innerHTML='Log geleert.'">Log leeren</button>
+
+<script>
+let done = false;
+
+function log(type, msg) {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML += `\n<span class="${type}">[${t}] ${msg}</span>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+const wrapper = document.getElementById('wrapper');
+const cb      = document.getElementById('cb');
+
+// ── Checkbox Events ──────────────────────────────────────────
+cb.addEventListener('touchstart', e => {
+  log('info', 'CB touchstart – target: ' + e.target.id);
+}, {passive: true});
+
+cb.addEventListener('touchend', e => {
+  log('ok', 'CB touchend – target: ' + e.target.id);
+  done = !done;
+  cb.className = 'checkbox' + (done ? ' checked' : '');
+  log('ok', '→ toggleTodo() wäre hier aufgerufen worden. done=' + done);
+});
+
+cb.addEventListener('click', e => {
+  log('warn', 'CB click (nach touchend) – stopPropagation läuft');
+  e.stopPropagation();
+});
+
+// ── Wrapper Events ───────────────────────────────────────────
+wrapper.addEventListener('touchstart', e => {
+  const onCb = e.target.closest('#cb');
+  log(onCb ? 'warn' : 'info',
+    'WRAPPER touchstart – target: ' + e.target.id + (onCb ? ' [trifft Checkbox!]' : ''));
+}, {passive: true});
+
+wrapper.addEventListener('touchend', e => {
+  log('info', 'WRAPPER touchend');
+});
+
+wrapper.addEventListener('click', e => {
+  log('err', 'WRAPPER click – würde Modal öffnen! target: ' + e.target.id);
+});
+</script>
+</body>
+</html>
