@@ -1467,7 +1467,7 @@ async function toggleTodo(id,done){
       completedAt:done?firebase.firestore.FieldValue.serverTimestamp():null,
       completedByEmail:newCompletedByEmail,
       notifiedCompletion:done?false:true,
-      notified:false, notifiedAt:done?undefined:null
+      notified:false, notifiedAt:null
     });
     if(done){
       // Zähler beim (Wieder-)Abschließen erhöhen
