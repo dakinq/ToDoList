@@ -1210,14 +1210,16 @@ function render(todos){
       cb.style.animation = newDone ? 'checkPop .35s cubic-bezier(.36,.07,.19,.97) forwards' : '';
       if(newDone){
         wrapper.style.animation = 'itemGlow .6s ease forwards';
-        // Item nach kurzer Zeit ausblenden
+        // Item ausblenden, dann erst Firestore schreiben
         setTimeout(()=>{
           wrapper.style.transition = 'opacity .4s ease, transform .4s ease';
           wrapper.style.opacity = '0';
           wrapper.style.transform = 'translateX(10px)';
+          setTimeout(()=>{ toggleTodo(todo.id, newDone); }, 400);
         }, 600);
+      } else {
+        toggleTodo(todo.id, newDone);
       }
-      toggleTodo(todo.id, newDone);
     };
     cb.onclick = handleToggle;
     cb.addEventListener('touchend', e=>{ e.preventDefault(); handleToggle(e); }, {passive:false});
