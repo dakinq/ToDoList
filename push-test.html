@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Push Test – ToDoList</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js"></script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f0f13;
+    color: #e8e8f0;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 28px;
+  }
+
+  .card {
+    background: #1a1a22;
+    border: 1px solid #2a2a36;
+    border-radius: 14px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .card-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #555;
+    margin-bottom: 14px;
+  }
+
+  .status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.green  { background: #4ade80; box-shadow: 0 0 6px #4ade8066; }
+  .dot.yellow { background: #facc15; box-shadow: 0 0 6px #facc1566; }
+  .dot.red    { background: #f87171; box-shadow: 0 0 6px #f8717166; }
+  .dot.grey   { background: #555; }
+
+  input[type="text"], input[type="email"], input[type="password"] {
+    width: 100%;
+    background: #111118;
+    border: 1px solid #2a2a36;
+    border-radius: 8px;
+    color: #e8e8f0;
+    font-size: 15px;
+    padding: 11px 13px;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  input:focus { border-color: #5b5bf6; }
+
+  button {
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-bottom: 8px;
+  }
+  button:active { opacity: 0.8; transform: scale(0.98); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .btn-primary { background: #5b5bf6; color: #fff; }
+  .btn-green   { background: #16a34a; color: #fff; }
+  .btn-amber   { background: #d97706; color: #fff; }
+  .btn-red     { background: #dc2626; color: #fff; }
+  .btn-ghost   { background: #1f1f2e; color: #aaa; border: 1px solid #2a2a36; }
+
+  .token-box {
+    background: #111118;
+    border: 1px solid #2a2a36;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #666;
+    word-break: break-all;
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .log {
+    background: #0a0a10;
+    border: 1px solid #2a2a36;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: #aaa;
+    max-height: 260px;
+    overflow-y: auto;
+    line-height: 1.7;
+  }
+
+  .log .ok   { color: #4ade80; }
+  .log .warn { color: #facc15; }
+  .log .err  { color: #f87171; }
+  .log .info { color: #60a5fa; }
+
+  .divider {
+    height: 1px;
+    background: #2a2a36;
+    margin: 14px 0;
+  }
+
+  #loginSection { display: block; }
+  #mainSection  { display: none; }
+</style>
+</head>
+<body>
+
+<h1>🔔 Push Test</h1>
+<p class="subtitle">ToDoList – Benachrichtigungen testen</p>
+
+<!-- LOGIN -->
+<div id="loginSection">
+  <div class="card">
+    <div class="card-title">Anmelden</div>
+    <input type="email"    id="emailIn"    placeholder="E-Mail">
+    <input type="password" id="passwordIn" placeholder="Passwort">
+    <button class="btn-primary" onclick="doLogin()">Anmelden</button>
+    <div id="loginErr" style="font-size:13px;color:#f87171;margin-top:4px;"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="mainSection">
+
+  <!-- Status -->
+  <div class="card">
+    <div class="card-title">Status</div>
+    <div class="status-row"><div class="dot grey" id="dotAuth"></div><span id="statusAuth">Nicht angemeldet</span></div>
+    <div class="status-row"><div class="dot grey" id="dotPerm"></div><span id="statusPerm">Berechtigung unbekannt</span></div>
+    <div class="status-row"><div class="dot grey" id="dotToken"></div><span id="statusToken">Kein Token</span></div>
+    <div class="divider"></div>
+    <div class="card-title">FCM Token (dieses Gerät)</div>
+    <div class="token-box" id="tokenBox">–</div>
+    <button class="btn-ghost" onclick="copyToken()">Token kopieren</button>
+  </div>
+
+  <!-- Test: Neuer Eintrag -->
+  <div class="card">
+    <div class="card-title">Test 1 – Neuer Eintrag</div>
+    <p style="font-size:13px;color:#888;margin-bottom:12px;">
+      Legt einen echten Eintrag mit <code style="color:#aaa">notifiedCreation: false</code> an.
+      Beim nächsten Script-Lauf (≤15 min) bekommst du die Push-Meldung.
+    </p>
+    <input type="text" id="newTodoText" placeholder="Aufgabe eingeben…">
+    <button class="btn-green" onclick="addTestTodo()">➕ Eintrag anlegen &amp; warten</button>
+    <div class="divider"></div>
+    <p style="font-size:13px;color:#888;margin-bottom:12px;">
+      Oder: Eintrag anlegen <em>und sofort</em> Push direkt an dieses Gerät senden (kein Script nötig).
+    </p>
+    <button class="btn-primary" onclick="addAndPushNow()">⚡ Sofort Push senden</button>
+  </div>
+
+  <!-- Test: Nur Push direkt -->
+  <div class="card">
+    <div class="card-title">Test 2 – Direkter Push (kein Firestore)</div>
+    <p style="font-size:13px;color:#888;margin-bottom:12px;">
+      Sendet eine lokale Browser-Notification an dieses Gerät. Testet ob der Service Worker und die Berechtigung korrekt funktionieren – ohne Firebase Functions oder Script.
+    </p>
+    <button class="btn-amber" onclick="sendLocalPush()">🔔 Lokale Test-Notification</button>
+  </div>
+
+  <!-- Log -->
+  <div class="card">
+    <div class="card-title">Log</div>
+    <div class="log" id="log"><span class="info">Bereit.</span></div>
+  </div>
+
+  <button class="btn-ghost" onclick="doLogout()">Abmelden</button>
+</div>
+
+<script>
+// ── Firebase Config ──────────────────────────────────────────
+firebase.initializeApp({
+  apiKey: "AIzaSyDfTQHSnhdX5-Z-3MCeDPpDeKXcuEbV1zE",
+  authDomain: "todoliste-badfd.firebaseapp.com",
+  projectId: "todoliste-badfd",
+  storageBucket: "todoliste-badfd.firebasestorage.app",
+  messagingSenderId: "764723309146",
+  appId: "1:764723309146:web:75a7f9c88264a967c30663"
+});
+
+const VAPID_KEY = "BNpmdm1YDApJwKObfKF7s8HXIEen4jLAoK0oh7vOUjX-kZl7CKfOvG5net-cGWwDYFVbwkaLcBIhAeXfmvs6_9A";
+
+const auth      = firebase.auth();
+const db        = firebase.firestore();
+const todosRef  = db.collection('todos');
+const tokensRef = db.collection('tokens');
+
+let messaging = null;
+let currentToken = null;
+let currentUser  = null;
+
+try { messaging = firebase.messaging(); } catch(e) { log('warn', 'Messaging nicht unterstützt: ' + e.message); }
+
+// ── Logging ──────────────────────────────────────────────────
+function log(type, msg) {
+  const el = document.getElementById('log');
+  const t = new Date().toLocaleTimeString('de-DE');
+  el.innerHTML += `\n<span class="${type}">[${t}] ${msg}</span>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function setDot(id, color) {
+  document.getElementById(id).className = 'dot ' + color;
+}
+
+// ── Auth ─────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('emailIn').value.trim();
+  const pass  = document.getElementById('passwordIn').value;
+  document.getElementById('loginErr').textContent = '';
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    document.getElementById('loginErr').textContent = e.message;
+  }
+}
+
+function doLogout() {
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  if (user) {
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('mainSection').style.display  = 'block';
+    setDot('dotAuth', 'green');
+    document.getElementById('statusAuth').textContent = 'Angemeldet als ' + user.email;
+    log('ok', 'Angemeldet: ' + user.email);
+    await initPush();
+  } else {
+    document.getElementById('loginSection').style.display = 'block';
+    document.getElementById('mainSection').style.display  = 'none';
+    setDot('dotAuth', 'grey');
+    document.getElementById('statusAuth').textContent = 'Nicht angemeldet';
+  }
+});
+
+// ── Push-Init ────────────────────────────────────────────────
+async function initPush() {
+  if (!messaging) {
+    setDot('dotPerm', 'red');
+    document.getElementById('statusPerm').textContent = 'Push nicht unterstützt';
+    return;
+  }
+
+  const perm = Notification.permission;
+  if (perm === 'denied') {
+    setDot('dotPerm', 'red');
+    document.getElementById('statusPerm').textContent = 'Berechtigung verweigert – bitte in Browser-Einstellungen erlauben';
+    log('err', 'Notification-Berechtigung verweigert.');
+    return;
+  }
+
+  try {
+    const reg = await navigator.serviceWorker.register('firebase-messaging-sw.js');
+    log('info', 'Service Worker registriert.');
+
+    const granted = await Notification.requestPermission();
+    if (granted !== 'granted') {
+      setDot('dotPerm', 'yellow');
+      document.getElementById('statusPerm').textContent = 'Berechtigung nicht erteilt';
+      log('warn', 'Notification-Berechtigung nicht erteilt.');
+      return;
+    }
+    setDot('dotPerm', 'green');
+    document.getElementById('statusPerm').textContent = 'Berechtigung erteilt ✓';
+
+    currentToken = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: reg });
+    if (currentToken) {
+      setDot('dotToken', 'green');
+      document.getElementById('statusToken').textContent = 'Token vorhanden ✓';
+      document.getElementById('tokenBox').textContent = currentToken;
+      log('ok', 'FCM Token: ' + currentToken.slice(0, 20) + '…');
+
+      // Token in Firestore speichern (gleich wie die Haupt-App)
+      await tokensRef.doc(currentToken).set({
+        token: currentToken,
+        email: currentUser?.email || null,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      log('ok', 'Token in Firestore gespeichert.');
+    } else {
+      setDot('dotToken', 'red');
+      document.getElementById('statusToken').textContent = 'Kein Token erhalten';
+      log('err', 'Kein FCM Token erhalten.');
+    }
+
+    // Vordergrund-Nachrichten abfangen
+    messaging.onMessage(payload => {
+      const data = payload.data || {};
+      log('ok', '🔔 Vordergrund-Push empfangen: ' + (data.title || '?') + ' – ' + (data.body || ''));
+      if (Notification.permission === 'granted') {
+        new Notification(data.title || 'Erinnerung', { body: data.body || '', icon: 'icon-192.png' });
+      }
+    });
+
+  } catch(e) {
+    log('err', 'Push-Init Fehler: ' + e.message);
+    setDot('dotToken', 'red');
+    document.getElementById('statusToken').textContent = 'Fehler: ' + e.message;
+  }
+}
+
+// ── Test 1a: Eintrag anlegen (normaler Weg, Script sendet) ───
+async function addTestTodo() {
+  const text = document.getElementById('newTodoText').value.trim();
+  if (!text) { log('warn', 'Bitte Text eingeben.'); return; }
+  if (!currentUser) { log('err', 'Nicht angemeldet.'); return; }
+
+  try {
+    const doc = await todosRef.add({
+      text,
+      done: false,
+      notes: null,
+      category: null,
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      recurring: null,
+      notified: false,
+      notifiedAt: null,
+      completedAt: null,
+      notifiedCreation: false,
+      notifiedCompletion: true,
+      photo: null,
+      authorEmail: currentUser.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    log('ok', `Eintrag angelegt (ID: ${doc.id}). Warte auf Script-Lauf (≤15 min)…`);
+    document.getElementById('newTodoText').value = '';
+  } catch(e) {
+    log('err', 'Fehler: ' + e.message);
+  }
+}
+
+// ── Test 1b: Eintrag anlegen + sofort lokale Push anzeigen ───
+async function addAndPushNow() {
+  const text = document.getElementById('newTodoText').value.trim() || 'Test-Eintrag';
+  if (!currentUser) { log('err', 'Nicht angemeldet.'); return; }
+
+  if (Notification.permission !== 'granted') {
+    log('warn', 'Keine Notification-Berechtigung.');
+    return;
+  }
+
+  try {
+    const doc = await todosRef.add({
+      text,
+      done: false,
+      notes: null,
+      category: null,
+      assignee: null,
+      dueDate: null,
+      priority: null,
+      recurring: null,
+      notified: false,
+      notifiedAt: null,
+      completedAt: null,
+      notifiedCreation: false,
+      notifiedCompletion: true,
+      photo: null,
+      authorEmail: currentUser.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    log('ok', 'Eintrag angelegt: ' + doc.id);
+
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('Neuer Eintrag', {
+      body: text,
+      icon: 'https://dakinq.github.io/ToDoList/icon-192.png',
+      badge: 'https://dakinq.github.io/ToDoList/icon-192.png',
+      data: { link: `https://dakinq.github.io/ToDoList/?editId=${doc.id}` }
+    });
+    log('ok', '🔔 Push direkt angezeigt!');
+    document.getElementById('newTodoText').value = '';
+  } catch(e) {
+    log('err', 'Fehler: ' + e.message);
+  }
+}
+
+// ── Test 2: Nur lokaler Push ─────────────────────────────────
+async function sendLocalPush() {
+  if (Notification.permission !== 'granted') {
+    log('warn', 'Keine Berechtigung. Bitte erst Push-Berechtigung erteilen.');
+    return;
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification('🔔 Test-Notification', {
+      body: 'Service Worker & Push funktionieren korrekt!',
+      icon: 'https://dakinq.github.io/ToDoList/icon-192.png',
+      badge: 'https://dakinq.github.io/ToDoList/icon-192.png'
+    });
+    log('ok', 'Lokale Test-Notification gesendet.');
+  } catch(e) {
+    log('err', 'Fehler: ' + e.message);
+  }
+}
+
+// ── Helfer ───────────────────────────────────────────────────
+function copyToken() {
+  if (!currentToken) { log('warn', 'Kein Token vorhanden.'); return; }
+  navigator.clipboard.writeText(currentToken)
+    .then(() => log('info', 'Token kopiert.'))
+    .catch(() => log('err', 'Kopieren fehlgeschlagen.'));
+}
+</script>
+</body>
+</html>
