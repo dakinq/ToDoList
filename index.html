@@ -1128,7 +1128,7 @@ function subscribeToTodos(){
       }
       todos.push({id:doc.id,...d});
     });
-    currentTodos=todos; render(todos);
+    currentTodos=todos; if(!window._suppressRender) render(todos);
     // Push-Notification Deep Link: ?editId=<todoId> – nur einmal beim ersten Laden
     if(!window._deepLinkHandled){
       window._deepLinkHandled=true;
@@ -1205,17 +1205,19 @@ function render(todos){
       e.stopPropagation();
       if(todo.deleted) return;
       const newDone = !todo.done;
-      // Sofort visuell abhaken
       cb.className = 'checkbox' + (newDone ? ' checked' : '');
       cb.style.animation = newDone ? 'checkPop .35s cubic-bezier(.36,.07,.19,.97) forwards' : '';
       if(newDone){
+        window._suppressRender = true;
         wrapper.style.animation = 'itemGlow .6s ease forwards';
-        // Item ausblenden, dann erst Firestore schreiben
         setTimeout(()=>{
           wrapper.style.transition = 'opacity .4s ease, transform .4s ease';
           wrapper.style.opacity = '0';
           wrapper.style.transform = 'translateX(10px)';
-          setTimeout(()=>{ toggleTodo(todo.id, newDone); }, 400);
+          setTimeout(()=>{
+            window._suppressRender = false;
+            toggleTodo(todo.id, newDone);
+          }, 400);
         }, 600);
       } else {
         toggleTodo(todo.id, newDone);
