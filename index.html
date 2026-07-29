@@ -147,10 +147,7 @@ body.dark .item.prio-3 { background:#162318; border-color:#3E7035; }
 .restore-btn { border:1px solid var(--line); background:var(--card); color:var(--sage); border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; }
 
 .item-content { display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:inherit; position:relative; z-index:1; transition:transform .1s ease; user-select:none; -webkit-user-select:none; }
-.checkbox { width:44px; height:44px; border-radius:50%; border:2px solid var(--sage); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:-11px; margin-left:-11px; background:transparent; transition:background .15s; position:relative; }
-.checkbox-inner { width:22px; height:22px; border-radius:50%; border:2px solid var(--sage); display:flex; align-items:center; justify-content:center; background:var(--card); transition:background .15s; pointer-events:none; }
-.checkbox.checked .checkbox-inner { background:var(--sage); border-color:var(--sage); }
-.checkbox.checked .checkbox-inner::after { content:'✓'; color:white; font-size:13px; font-weight:bold; }
+.checkbox { width:22px; height:22px; border-radius:50%; border:2px solid var(--sage); flex-shrink:0; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:2px; background:var(--card); transition:background .15s; }
 .item.prio-1 .checkbox, .item.prio-2 .checkbox, .item.prio-3 .checkbox { background:transparent; }
 .checkbox.checked { background:var(--sage); border-color:var(--sage); }
 .checkbox.checked::after { content:'✓'; color:white; font-size:13px; font-weight:bold; }
@@ -1204,8 +1201,8 @@ function render(todos){
 
     const cb=document.createElement('div');
     cb.className='checkbox'+(todo.done?' checked':'');
-    cb.innerHTML='<div class="checkbox-inner"></div>';
     cb.onclick=e=>{e.stopPropagation();if(!todo.deleted)toggleTodo(todo.id,!todo.done);};
+    cb.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();if(!todo.deleted)toggleTodo(todo.id,!todo.done);},{passive:false});
     if(todo.deleted) cb.style.visibility='hidden';
 
     const body=document.createElement('div');
@@ -1457,7 +1454,10 @@ async function addTodo(){
   try{ await todosRef.add(payload); }catch(e){console.error(e);}
 }
 
+const _toggleDebounce={};
 async function toggleTodo(id,done){
+  if(_toggleDebounce[id]) return;
+  _toggleDebounce[id]=true; setTimeout(()=>delete _toggleDebounce[id],600);
   if(done && navigator.vibrate) navigator.vibrate(40);
   const todo=currentTodos.find(t=>t.id===id); if(!todo) return;
   try{
@@ -2032,8 +2032,8 @@ function buildTodayItem(todo, withHandle){
 
   const cb = document.createElement('div');
   cb.className = 'checkbox' + (todo.done?' checked':'');
-  cb.innerHTML = '<div class="checkbox-inner"></div>';
   cb.onclick = e=>{ e.stopPropagation(); toggleTodo(todo.id, !todo.done); };
+  cb.addEventListener('touchend',e=>{e.stopPropagation();e.preventDefault();toggleTodo(todo.id,!todo.done);},{passive:false});
 
   const body = document.createElement('div');
   body.className = 'item-body';
