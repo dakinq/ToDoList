@@ -1857,6 +1857,7 @@ function switchView(idx){
   viewsSlider.style.transform = idx === 0 ? 'translateX(0)' : 'translateX(-50%)';
   tabAll.classList.toggle('active', idx === 0);
   tabToday.classList.toggle('active', idx === 1);
+  window.scrollTo({top:0, behavior:'smooth'});
 }
 tabAll.addEventListener('click', ()=>switchView(0));
 tabToday.addEventListener('click', ()=>switchView(1));
