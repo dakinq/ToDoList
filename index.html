@@ -1176,9 +1176,7 @@ function render(todos){
     if(a.done!==b.done) return a.done?1:-1;
     const ap=a.priority?parseInt(a.priority):99, bp=b.priority?parseInt(b.priority):99;
     if(ap!==bp) return ap-bp;
-    const ad=a.dueDate?new Date(a.dueDate):null, bd=b.dueDate?new Date(b.dueDate):null;
-    if(ad&&bd) return ad-bd; if(ad) return -1; if(bd) return 1;
-    return (a.createdAt?a.createdAt.toMillis():0)-(b.createdAt?b.createdAt.toMillis():0);
+    return (a.text||'').localeCompare(b.text||'','de',{sensitivity:'base'});
   });
 
   // Aktive und erledigte/gelöschte trennen
