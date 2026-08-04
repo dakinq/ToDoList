@@ -1058,7 +1058,7 @@ searchInput.addEventListener('input',()=>{ activeFilter.search=searchInput.value
 function applyFilters(todos){
   return todos.filter(t=>{
     const s=activeFilter.search.toLowerCase();
-    if(s&&!t.text.toLowerCase().includes(s)&&!(t.notes||'').toLowerCase().includes(s)) return false;
+    if(s&&!t.text.toLowerCase().includes(s)&&!(t.notes||'').toLowerCase().includes(s)&&!getDisplayName(t.assignee).toLowerCase().includes(s)) return false;
     if(activeFilter.category&&t.category!==activeFilter.category) return false;
     if(activeFilter.assignee&&t.assignee!==activeFilter.assignee) return false;
     if(activeFilter.priority&&t.priority!==activeFilter.priority) return false;
