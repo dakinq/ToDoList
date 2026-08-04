@@ -38,12 +38,13 @@ async function getTokens(includeEmails) {
   return tokens;
 }
 
-// Alle Tokens holen ausser bestimmte E-Mail
+// Alle Tokens holen ausser bestimmte E-Mail (Token ohne E-Mail werden ignoriert)
 async function getTokensExcept(excludeEmail) {
   const snapshot = await db.collection('tokens').get();
   const tokens = [];
   snapshot.forEach(doc => {
     const data = doc.data();
+    if (!data.email) return; // Token ohne E-Mail ignorieren
     if (!excludeEmail || data.email !== excludeEmail) tokens.push(data.token);
   });
   return tokens;
