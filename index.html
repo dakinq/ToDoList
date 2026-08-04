@@ -899,13 +899,18 @@ async function fixTokenEmail(user){
     const reg=await navigator.serviceWorker.ready;
     const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
     if(!token) return;
+    // Aktuellen Token mit E-Mail speichern
     await tokensRef.doc(token).set({token,email:user.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    // Alle anderen Token dieser E-Mail + Token ohne E-Mail löschen
     const snap=await tokensRef.get();
     const batch=db.batch();
     let count=0;
-    snap.forEach(doc=>{ if(!doc.data().email){ batch.delete(doc.ref); count++; } });
+    snap.forEach(doc=>{
+      const d=doc.data();
+      if(doc.id!==token && (!d.email || d.email===user.email)){ batch.delete(doc.ref); count++; }
+    });
     if(count>0) await batch.commit();
-    console.log('Token bereinigt: '+count+' ohne E-Mail entfernt.');
+    console.log('Token bereinigt: '+count+' alte/ungültige Token entfernt.');
   }catch(e){ console.warn('Token-Bereinigung fehlgeschlagen:',e); }
 }
 
