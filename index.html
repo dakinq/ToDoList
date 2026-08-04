@@ -893,9 +893,26 @@ async function doLogin(){
 }
 signoutSettingsBtn.addEventListener('click',()=>{auth.signOut(); settingsModal.classList.add('hidden');});
 
+async function fixTokenEmail(user){
+  if(!user||!messaging) return;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    const token=await messaging.getToken({vapidKey:VAPID_KEY,serviceWorkerRegistration:reg});
+    if(!token) return;
+    await tokensRef.doc(token).set({token,email:user.email,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    const snap=await tokensRef.get();
+    const batch=db.batch();
+    let count=0;
+    snap.forEach(doc=>{ if(!doc.data().email){ batch.delete(doc.ref); count++; } });
+    if(count>0) await batch.commit();
+    console.log('Token bereinigt: '+count+' ohne E-Mail entfernt.');
+  }catch(e){ console.warn('Token-Bereinigung fehlgeschlagen:',e); }
+}
+
 auth.onAuthStateChanged(user=>{
   if(user){
     loginView.classList.add('hidden'); appView.classList.remove('hidden');
+    fixTokenEmail(user);
     ensureDefaults().then(()=>{
       registerCurrentUser();
       subscribeToUsernames();
